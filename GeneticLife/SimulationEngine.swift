@@ -116,25 +116,71 @@ final class SimulationEngine: ObservableObject {
         update(&decisionTreeCases[index].rules)
     }
 
-    func decisionPrediction(for caseStudy: DecisionTreeCase) -> DecisionOutcome {
+    func decisionPath(for caseStudy: DecisionTreeCase) -> [DecisionTreeNodeResult] {
         let organism = caseStudy.organism
         let rules = caseStudy.rules
+        var path: [DecisionTreeNodeResult] = []
 
-        let energyPass = organism.energy >= rules.energyThreshold
-        let sizePass = organism.genome.size >= rules.sizeThreshold
-
-        let traitValue: Double
-        switch caseStudy.kind {
-        case .plant:
-            traitValue = organism.genome.green
-        case .herbivore:
-            traitValue = organism.genome.speed
-        case .predator:
-            traitValue = organism.genome.vision
+        func append(_ question: String, value: Double, threshold: Double, yes: String, no: String) -> Bool {
+            let passed = value >= threshold
+            path.append(
+                DecisionTreeNodeResult(
+                    question: question,
+                    value: value,
+                    threshold: threshold,
+                    passed: passed,
+                    branchLabel: passed ? yes : no
+                )
+            )
+            return passed
         }
 
-        let traitPass = traitValue >= rules.traitThreshold
-        return (energyPass && sizePass && traitPass) ? .survive : .die
+        switch caseStudy.kind {
+        case .plant:
+            guard append("Enough stored energy?", value: organism.energy, threshold: rules.energyThreshold, yes: "YES → check greenness", no: "NO → Die") else { return path }
+            guard append("Green enough for efficient photosynthesis?", value: organism.genome.green, threshold: rules.greenThreshold, yes: "YES → check size", no: "NO → check body size") else {
+                _ = append("Large enough to compensate?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
+                return path
+            }
+            _ = append("Large enough energy reserve?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
+
+        case .herbivore:
+            guard append("Enough stored energy?", value: organism.energy, threshold: rules.energyThreshold, yes: "YES → check speed", no: "NO → Die") else { return path }
+            if append("Fast enough to reach food / escape?", value: organism.genome.speed, threshold: rules.speedThreshold, yes: "YES → check vision", no: "NO → check visibility") {
+                if append("Vision good enough to detect food and threats?", value: organism.genome.vision, threshold: rules.visionThreshold, yes: "YES → check size", no: "NO → check visibility") {
+                    _ = append("Large enough to survive encounters?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → check visibility")
+                    if path.last?.passed == false {
+                        _ = append("Hard enough to spot?", value: 1.0 - organism.genome.visibility, threshold: 1.0 - rules.visibilityThreshold, yes: "YES → Survive", no: "NO → Die")
+                    }
+                } else {
+                    _ = append("Hard enough to spot?", value: 1.0 - organism.genome.visibility, threshold: 1.0 - rules.visibilityThreshold, yes: "YES → Survive", no: "NO → Die")
+                }
+            } else {
+                _ = append("Hard enough to spot?", value: 1.0 - organism.genome.visibility, threshold: 1.0 - rules.visibilityThreshold, yes: "YES → Survive", no: "NO → Die")
+            }
+
+        case .predator:
+            guard append("Enough stored energy?", value: organism.energy, threshold: rules.energyThreshold, yes: "YES → check vision", no: "NO → Die") else { return path }
+            if append("Vision good enough to find prey?", value: organism.genome.vision, threshold: rules.visionThreshold, yes: "YES → check speed", no: "NO → check size") {
+                if append("Fast enough to catch prey?", value: organism.genome.speed, threshold: rules.speedThreshold, yes: "YES → check size", no: "NO → check size") {
+                    _ = append("Large enough to overpower prey?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
+                } else {
+                    _ = append("Large enough to compensate for low speed?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
+                }
+            } else {
+                _ = append("Large enough to survive with poor hunting?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → check speed", no: "NO → Die")
+                if path.last?.passed == true {
+                    _ = append("Fast enough despite poor vision?", value: organism.genome.speed, threshold: rules.speedThreshold, yes: "YES → Survive", no: "NO → Die")
+                }
+            }
+        }
+
+        return path
+    }
+
+    func decisionPrediction(for caseStudy: DecisionTreeCase) -> DecisionOutcome {
+        guard let last = decisionPath(for: caseStudy).last else { return .die }
+        return last.branchLabel.contains("Survive") ? .survive : .die
     }
 
     func setAutomaticMode(_ enabled: Bool) {
@@ -615,25 +661,28 @@ final class SimulationEngine: ObservableObject {
             return DecisionTreeRules(
                 energyThreshold: 70,
                 sizeThreshold: 0.45,
-                traitThreshold: 0.55,
-                requireGreen: true,
-                predictedOutcome: .survive
+                speedThreshold: 0.50,
+                visionThreshold: 0.50,
+                greenThreshold: 0.55,
+                visibilityThreshold: 0.55
             )
         case .herbivore:
             return DecisionTreeRules(
                 energyThreshold: 65,
                 sizeThreshold: 0.40,
-                traitThreshold: 0.50,
-                requireGreen: false,
-                predictedOutcome: .survive
+                speedThreshold: 0.50,
+                visionThreshold: 0.45,
+                greenThreshold: 0.55,
+                visibilityThreshold: 0.55
             )
         case .predator:
             return DecisionTreeRules(
                 energyThreshold: 75,
                 sizeThreshold: 0.55,
-                traitThreshold: 0.50,
-                requireGreen: false,
-                predictedOutcome: .survive
+                speedThreshold: 0.50,
+                visionThreshold: 0.55,
+                greenThreshold: 0.55,
+                visibilityThreshold: 0.55
             )
         }
     }
