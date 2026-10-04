@@ -800,11 +800,22 @@ struct ContentView: View {
     }
 
     private func treeLeaf(_ title: String) -> some View {
-        Text("LEAF: \(title)")
-            .font(.title3.bold())
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(Color.secondary.opacity(0.12), in: Capsule())
+        VStack(spacing: 5) {
+            Text("LEAF")
+                .font(.body.bold())
+                .foregroundStyle(.secondary)
+
+            Text(title)
+                .font(.title3.bold())
+                .multilineTextAlignment(.center)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 78)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.primary.opacity(0.28), lineWidth: 2)
+        )
     }
 
     private func treeConnector(_ label: String) -> some View {
