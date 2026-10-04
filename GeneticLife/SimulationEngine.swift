@@ -116,6 +116,27 @@ final class SimulationEngine: ObservableObject {
         update(&decisionTreeCases[index].rules)
     }
 
+    func decisionPrediction(for caseStudy: DecisionTreeCase) -> DecisionOutcome {
+        let organism = caseStudy.organism
+        let rules = caseStudy.rules
+
+        let energyPass = organism.energy >= rules.energyThreshold
+        let sizePass = organism.genome.size >= rules.sizeThreshold
+
+        let traitValue: Double
+        switch caseStudy.kind {
+        case .plant:
+            traitValue = organism.genome.green
+        case .herbivore:
+            traitValue = organism.genome.speed
+        case .predator:
+            traitValue = organism.genome.vision
+        }
+
+        let traitPass = traitValue >= rules.traitThreshold
+        return (energyPass && sizePass && traitPass) ? .survive : .die
+    }
+
     func setAutomaticMode(_ enabled: Bool) {
         automaticMode = enabled
         automaticTask?.cancel()
@@ -624,7 +645,7 @@ final class SimulationEngine: ObservableObject {
             let actual: DecisionOutcome = (actualOrganism?.isAlive == true) ? .survive : .die
             return DecisionTreeResult(
                 caseStudy: caseStudy,
-                predicted: caseStudy.rules.predictedOutcome,
+                predicted: decisionPrediction(for: caseStudy),
                 actual: actual
             )
         }
