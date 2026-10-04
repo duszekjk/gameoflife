@@ -402,7 +402,7 @@ final class SimulationEngine: ObservableObject {
     private func crossoverSameType(_ a: Genome, _ b: Genome) -> Genome {
         precondition(a.kind == b.kind, "Crossover is only valid between organisms of the same type.")
 
-        Genome(
+        return Genome(
             kind: a.kind,
             size: Bool.random() ? a.size : b.size,
             speed: a.kind == .plant ? 0 : (Bool.random() ? a.speed : b.speed),
