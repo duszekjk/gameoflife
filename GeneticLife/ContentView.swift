@@ -9,7 +9,6 @@ struct ContentView: View {
             settingsSidebar
                 .navigationTitle("Settings")
                 .navigationSplitViewColumnWidth(min: 300, ideal: 340)
-                .controlSize(.large)
         } detail: {
             ScrollView {
                 VStack(spacing: 18) {
@@ -24,7 +23,6 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
             .navigationTitle("Genetic Life")
-            .controlSize(.large)
         }
     }
 
@@ -88,7 +86,7 @@ struct ContentView: View {
                         get: { engine.configuration.minimumAnimalSurvivors },
                         set: { engine.configuration.minimumAnimalSurvivors = $0 }
                     ),
-                    range: 1...max(2, engine.configuration.animalCount - 1)
+                    range: 5...max(20, engine.configuration.animalCount - 1)
                 )
 
                 Toggle("Show vision circles", isOn: $showVision)
@@ -194,6 +192,9 @@ struct ContentView: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: 16)
                         .fill(Color.secondary.opacity(0.08))
+
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(Color.primary.opacity(0.35), lineWidth: 3)
 
                     ForEach(engine.organisms.filter(\.isAlive)) { organism in
                         organismView(organism)
@@ -316,6 +317,7 @@ struct ContentView: View {
                 .font(.title2.bold())
 
             Text("The whole population is scored first. Below are four concrete survivors so you can connect their visible phenotype with the fitness value used by selection.")
+                .font(.title3)
                 .foregroundStyle(.secondary)
 
             aggregateFitnessTable(ranked: Array(ranked.prefix(8)))
@@ -341,6 +343,7 @@ struct ContentView: View {
                 .font(.title2.bold())
 
             Text("Selection happens independently inside each type. Plants compete with plants, herbivores with herbivores, and predators with predators. Higher fitness increases the probability of being sampled.")
+                .font(.title3)
                 .foregroundStyle(.secondary)
 
             HStack {
@@ -370,6 +373,7 @@ struct ContentView: View {
                 .font(.title2.bold())
 
             Text("These are actual parent pairings used to create offspring in this generation. Each row shows the two parents, the child that was produced, and which genes came from Parent A. All remaining genes came from Parent B.")
+                .font(.title3)
                 .foregroundStyle(.secondary)
 
             if engine.crossoverExamples.isEmpty {
@@ -390,6 +394,7 @@ struct ContentView: View {
                 .font(.title2.bold())
 
             Text("Four offspring are sampled from the real population. Each has the configured mutation probability. Some examples may show no mutation at all—that is part of the algorithm.")
+                .font(.title3)
                 .foregroundStyle(.secondary)
 
             ForEach(Array(engine.mutationExamples.prefix(4))) { example in
@@ -405,6 +410,7 @@ struct ContentView: View {
                 .font(.title2.bold())
 
             Text("The full offspring population now replaces the previous generation. Here are four examples of organisms that actually entered the new population.")
+                .font(.title3)
                 .foregroundStyle(.secondary)
 
             exampleGrid {
@@ -663,8 +669,8 @@ struct ContentView: View {
                 .monospacedDigit()
             }
         }
-        .font(.body)
-        .padding(12)
+        .font(.title3)
+        .padding(18)
         .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
     }
 
@@ -673,9 +679,11 @@ struct ContentView: View {
             HStack(alignment: .center, spacing: 18) {
                 specimenVisual(example.parentA, label: "Parent A")
                 Image(systemName: "plus")
+                    .font(.title)
                     .foregroundStyle(.secondary)
                 specimenVisual(example.parentB, label: "Parent B")
                 Image(systemName: "arrow.right")
+                    .font(.title)
                     .foregroundStyle(.secondary)
                 specimenVisual(example.child, label: "Offspring")
             }
@@ -683,7 +691,7 @@ struct ContentView: View {
 
             Divider()
 
-            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 5) {
+            Grid(alignment: .leading, horizontalSpacing: 22, verticalSpacing: 12) {
                 GridRow {
                     Text("Gene").bold()
                     Text("A").bold()
@@ -701,7 +709,7 @@ struct ContentView: View {
                 geneRow("Green", key: "green", a: example.parentA.genome.green, child: example.child.genome.green, b: example.parentB.genome.green, inherited: example.inheritedFromA)
                 geneRow("Blue", key: "blue", a: example.parentA.genome.blue, child: example.child.genome.blue, b: example.parentB.genome.blue, inherited: example.inheritedFromA)
             }
-            .font(.caption.monospacedDigit())
+            .font(.title3.monospacedDigit())
         }
         .padding(12)
         .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
@@ -768,7 +776,7 @@ struct ContentView: View {
         VStack(spacing: 8) {
             specimenVisual(organism, label: title)
             Text(footer)
-                .font(.body)
+                .font(.title3)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -795,10 +803,10 @@ struct ContentView: View {
             .frame(width: 108, height: 108)
 
             Text(label)
-                .font(.caption.bold())
+                .font(.title3.bold())
 
             Text(genomeSummary(organism.genome))
-                .font(.callout.monospacedDigit())
+                .font(.title3.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -848,6 +856,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
+            .controlSize(.regular)
             .disabled(engine.isRunningEnvironment)
 
             Toggle(
@@ -859,6 +868,7 @@ struct ContentView: View {
                 Label("Automatic", systemImage: "play.circle")
             }
             .toggleStyle(.button)
+            .controlSize(.regular)
 
             Button {
                 engine.resetPopulation()
@@ -866,6 +876,7 @@ struct ContentView: View {
                 Label("Restart", systemImage: "arrow.counterclockwise")
             }
             .buttonStyle(.bordered)
+            .controlSize(.regular)
         }
     }
 
