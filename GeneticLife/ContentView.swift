@@ -487,22 +487,50 @@ struct ContentView: View {
                     )
                 }
 
-                HStack {
-                    Text("Final expert prediction")
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Decision tree evaluation")
                         .font(.title2.bold())
 
-                    Spacer()
+                    decisionBranch(
+                        label: "Energy",
+                        actual: organism.energy,
+                        threshold: caseStudy.rules.energyThreshold
+                    )
+                    decisionBranch(
+                        label: "Size",
+                        actual: organism.genome.size,
+                        threshold: caseStudy.rules.sizeThreshold
+                    )
 
-                    Picker(
-                        "Prediction",
-                        selection: decisionOutcomeBinding(caseStudy.id)
-                    ) {
-                        ForEach(DecisionOutcome.allCases) { outcome in
-                            Text(outcome.rawValue).tag(outcome)
+                    let traitValue: Double = {
+                        switch caseStudy.kind {
+                        case .plant: return organism.genome.green
+                        case .herbivore: return organism.genome.speed
+                        case .predator: return organism.genome.vision
                         }
+                    }()
+
+                    let traitName: String = {
+                        switch caseStudy.kind {
+                        case .plant: return "Green"
+                        case .herbivore: return "Speed"
+                        case .predator: return "Vision"
+                        }
+                    }()
+
+                    decisionBranch(
+                        label: traitName,
+                        actual: traitValue,
+                        threshold: caseStudy.rules.traitThreshold
+                    )
+
+                    HStack {
+                        Text("Tree prediction")
+                            .font(.title2.bold())
+                        Spacer()
+                        Text(engine.decisionPrediction(for: caseStudy).rawValue)
+                            .font(.largeTitle.bold())
                     }
-                    .pickerStyle(.segmented)
-                    .frame(maxWidth: 360)
                 }
             }
         }
@@ -578,17 +606,20 @@ struct ContentView: View {
         )
     }
 
-    private func decisionOutcomeBinding(_ id: UUID) -> Binding<DecisionOutcome> {
-        Binding(
-            get: {
-                engine.decisionTreeCases.first(where: { $0.id == id })?.rules.predictedOutcome ?? .survive
-            },
-            set: { newValue in
-                engine.updateDecisionTreeRules(for: id) { rules in
-                    rules.predictedOutcome = newValue
-                }
-            }
-        )
+    private func decisionBranch(label: String, actual: Double, threshold: Double) -> some View {
+        let passes = actual >= threshold
+        return HStack {
+            Text("\(label): \(actual.formatted(.number.precision(.fractionLength(2))))")
+                .font(.title3.monospacedDigit())
+            Spacer()
+            Image(systemName: passes ? "checkmark.circle.fill" : "xmark.circle.fill")
+            Text(passes ? "YES" : "NO")
+                .font(.title3.bold())
+            Text("≥ \(threshold.formatted(.number.precision(.fractionLength(2))))")
+                .font(.title3.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(.vertical, 4)
     }
 
     private func largeThresholdSlider(
