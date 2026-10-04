@@ -411,11 +411,11 @@ final class SimulationEngine: ObservableObject {
         let requiredKinds: [OrganismKind] = [.plant, .herbivore, .predator]
 
         for kind in requiredKinds {
-            let candidates = organisms.filter { $0.isAlive && $0.genome.kind == kind }
+            let candidates = reproductionCandidates(for: kind)
             guard !candidates.isEmpty else { continue }
 
-            let count = kind == .plant ? max(2, configuration.plantCount) :
-                (kind == .herbivore ? max(2, configuration.herbivoreCount) : max(2, configuration.predatorCount))
+            let count = kind == .plant ? max(5, configuration.plantCount) :
+                (kind == .herbivore ? max(5, configuration.herbivoreCount) : max(5, configuration.predatorCount))
 
             for _ in 0..<count {
                 if let chosen = weightedChoice(from: candidates) {
@@ -450,12 +450,12 @@ final class SimulationEngine: ObservableObject {
             var parentB: Organism?
             var inheritedFromA: [String] = []
 
-            if let a = parents.randomElement(), let b = parents.randomElement() {
-                let result = crossoverSameType(a.genome, b.genome)
+            if let pair = distinctParentPair(from: parents) {
+                let result = crossoverSameType(pair.0.genome, pair.1.genome)
                 genome = result.genome
                 inheritedFromA = result.inheritedFromA
-                parentA = a
-                parentB = b
+                parentA = pair.0
+                parentB = pair.1
             } else {
                 genome = .random(kind: kind)
             }
@@ -651,6 +651,44 @@ final class SimulationEngine: ObservableObject {
         }
     }
 
+    private func reproductionCandidates(for kind: OrganismKind) -> [Organism] {
+        let sameType = organisms.filter { $0.genome.kind == kind }
+        guard !sameType.isEmpty else { return [] }
+
+        let living = sameType.filter { $0.isAlive }.sorted { $0.fitness > $1.fitness }
+        if living.count >= 5 {
+            return living
+        }
+
+        let deadFallback = sameType
+            .filter { !$0.isAlive }
+            .sorted {
+                if $0.foodEaten == $1.foodEaten {
+                    return $0.energy > $1.energy
+                }
+                return $0.foodEaten > $1.foodEaten
+            }
+
+        var result = living
+        for organism in deadFallback where result.count < 5 {
+            result.append(organism)
+        }
+
+        return result
+    }
+
+    private func distinctParentPair(from parents: [Organism]) -> (Organism, Organism)? {
+        let unique = Array(Dictionary(grouping: parents, by: \.id).compactMap { $0.value.first })
+        guard let first = unique.randomElement() else { return nil }
+
+        let alternatives = unique.filter { $0.id != first.id }
+        if let second = alternatives.randomElement() {
+            return (first, second)
+        }
+
+        return unique.count == 1 ? (first, first) : nil
+    }
+
     private func weightedChoice(from candidates: [Organism]) -> Organism? {
         guard !candidates.isEmpty else { return nil }
         let total = candidates.reduce(0) { $0 + max(0.001, $1.fitness) }
@@ -714,19 +752,22 @@ final class SimulationEngine: ObservableObject {
 
     private func keepInsideArena(index: Int) {
         let radius = organisms[index].radius
-        let maxX = max(radius, arenaSize.width - radius)
-        let maxY = max(radius, arenaSize.height - radius)
+        let overscan: CGFloat = 36
+        let minX = -overscan + radius
+        let minY = -overscan + radius
+        let maxX = arenaSize.width + overscan - radius
+        let maxY = arenaSize.height + overscan - radius
 
-        if organisms[index].position.x < radius {
-            organisms[index].position.x = radius
+        if organisms[index].position.x < minX {
+            organisms[index].position.x = minX
             organisms[index].velocity.dx = abs(organisms[index].velocity.dx)
         } else if organisms[index].position.x > maxX {
             organisms[index].position.x = maxX
             organisms[index].velocity.dx = -abs(organisms[index].velocity.dx)
         }
 
-        if organisms[index].position.y < radius {
-            organisms[index].position.y = radius
+        if organisms[index].position.y < minY {
+            organisms[index].position.y = minY
             organisms[index].velocity.dy = abs(organisms[index].velocity.dy)
         } else if organisms[index].position.y > maxY {
             organisms[index].position.y = maxY
