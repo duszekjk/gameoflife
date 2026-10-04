@@ -17,6 +17,9 @@ final class SimulationEngine: ObservableObject {
     @Published private(set) var mutationExamples: [MutationExample] = []
     @Published private(set) var mutatedGeneDescription: String?
     @Published private(set) var statusMessage: String?
+    @Published var decisionTreeMode = false
+    @Published private(set) var decisionTreeCases: [DecisionTreeCase] = []
+    @Published private(set) var decisionTreeResults: [DecisionTreeResult] = []
 
     var arenaSize = CGSize(width: 700, height: 430)
 
@@ -46,7 +49,10 @@ final class SimulationEngine: ObservableObject {
         mutationExamples = []
         mutatedGeneDescription = nil
         statusMessage = nil
+        decisionTreeCases = []
+        decisionTreeResults = []
         organisms = makeRandomPopulation()
+        prepareDecisionTreeCases()
     }
 
     func applyConfigurationAndReset() {
@@ -90,8 +96,24 @@ final class SimulationEngine: ObservableObject {
             mutationExamples = []
             mutatedGeneDescription = nil
             statusMessage = nil
+            decisionTreeCases = []
+            decisionTreeResults = []
+            prepareDecisionTreeCases()
             scheduleAutomaticAdvanceIfNeeded()
         }
+    }
+
+    func setDecisionTreeMode(_ enabled: Bool) {
+        decisionTreeMode = enabled
+        decisionTreeResults = []
+        if enabled {
+            prepareDecisionTreeCases()
+        }
+    }
+
+    func updateDecisionTreeRules(for caseID: UUID, _ update: (inout DecisionTreeRules) -> Void) {
+        guard let index = decisionTreeCases.firstIndex(where: { $0.id == caseID }) else { return }
+        update(&decisionTreeCases[index].rules)
     }
 
     func setAutomaticMode(_ enabled: Bool) {
@@ -148,6 +170,9 @@ final class SimulationEngine: ObservableObject {
     }
 
     private func beginEnvironment() {
+        if decisionTreeMode && decisionTreeCases.isEmpty {
+            prepareDecisionTreeCases()
+        }
         step = .environment
         elapsedTime = 0
         statusMessage = nil
@@ -164,6 +189,7 @@ final class SimulationEngine: ObservableObject {
     private func finishEnvironment() {
         stopTimer()
         evaluateFitness()
+        evaluateDecisionTreePredictions()
         step = .fitness
         scheduleAutomaticAdvanceIfNeeded()
     }
@@ -541,6 +567,67 @@ final class SimulationEngine: ObservableObject {
         organisms = offspring
         generation += 1
         elapsedTime = 0
+    }
+
+    private func prepareDecisionTreeCases() {
+        guard decisionTreeMode || decisionTreeCases.isEmpty else { return }
+
+        let kinds: [OrganismKind] = [.plant, .herbivore, .predator]
+        decisionTreeCases = kinds.compactMap { kind in
+            guard let organism = organisms.filter({ $0.genome.kind == kind }).randomElement() else { return nil }
+            return DecisionTreeCase(
+                organismID: organism.id,
+                kind: kind,
+                organism: organism,
+                rules: defaultDecisionRules(for: organism)
+            )
+        }
+    }
+
+    private func defaultDecisionRules(for organism: Organism) -> DecisionTreeRules {
+        switch organism.genome.kind {
+        case .plant:
+            return DecisionTreeRules(
+                energyThreshold: 70,
+                sizeThreshold: 0.45,
+                traitThreshold: 0.55,
+                requireGreen: true,
+                predictedOutcome: .survive
+            )
+        case .herbivore:
+            return DecisionTreeRules(
+                energyThreshold: 65,
+                sizeThreshold: 0.40,
+                traitThreshold: 0.50,
+                requireGreen: false,
+                predictedOutcome: .survive
+            )
+        case .predator:
+            return DecisionTreeRules(
+                energyThreshold: 75,
+                sizeThreshold: 0.55,
+                traitThreshold: 0.50,
+                requireGreen: false,
+                predictedOutcome: .survive
+            )
+        }
+    }
+
+    private func evaluateDecisionTreePredictions() {
+        guard decisionTreeMode else {
+            decisionTreeResults = []
+            return
+        }
+
+        decisionTreeResults = decisionTreeCases.map { caseStudy in
+            let actualOrganism = organisms.first(where: { $0.id == caseStudy.organismID })
+            let actual: DecisionOutcome = (actualOrganism?.isAlive == true) ? .survive : .die
+            return DecisionTreeResult(
+                caseStudy: caseStudy,
+                predicted: caseStudy.rules.predictedOutcome,
+                actual: actual
+            )
+        }
     }
 
     private func weightedChoice(from candidates: [Organism]) -> Organism? {
