@@ -431,7 +431,7 @@ struct ContentView: View {
             Text("Decision trees — make a prediction before the simulation")
                 .font(.largeTitle.bold())
 
-            Text("Act as the domain expert. For each selected organism, inspect its visible traits and define thresholds that lead to your final prediction: survive or die. These rules are explanatory only; they will not influence the simulation.")
+            Text("Act as the domain expert. A decision tree is a sequence of branching questions: each answer sends the specimen down one branch until it reaches a leaf. Different specimens may therefore be evaluated by different questions. Configure the thresholds, inspect the path, then test the prediction against the simulation.")
                 .font(.title3)
                 .foregroundStyle(.secondary)
 
@@ -445,12 +445,12 @@ struct ContentView: View {
     private func decisionTreeCaseEditor(_ caseStudy: DecisionTreeCase) -> some View {
         let organism = caseStudy.organism
 
-        return VStack(alignment: .leading, spacing: 16) {
+        return VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 20) {
                 specimenVisual(organism, label: caseStudy.title)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Build the expert rule")
+                    Text("Build the expert tree")
                         .font(.title2.bold())
 
                     Text(decisionTreeExplanation(for: caseStudy))
@@ -463,70 +463,272 @@ struct ContentView: View {
 
             Divider()
 
-            VStack(spacing: 16) {
-                largeThresholdSlider(
-                    title: "1. Energy must be at least",
-                    value: decisionBinding(caseStudy.id, keyPath: \.energyThreshold),
-                    range: 0...140,
-                    valueText: caseStudy.rules.energyThreshold.formatted(.number.precision(.fractionLength(0)))
-                )
+            VStack(alignment: .leading, spacing: 10) {
+                Text("How a decision tree works")
+                    .font(.title2.bold())
 
-                largeThresholdSlider(
-                    title: "2. Size must be at least",
-                    value: decisionBinding(caseStudy.id, keyPath: \.sizeThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
+                Text("Start at the root question. Follow exactly one branch based on YES or NO. That branch may lead to another decision node, and eventually to a leaf such as Survive or Die. Only the questions on the chosen path are evaluated.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
 
-                if caseStudy.kind == .plant {
-                    largeThresholdSlider(
-                        title: "3. Green channel must be at least",
-                        value: decisionBinding(caseStudy.id, keyPath: \.traitThreshold),
-                        range: 0.05...1.0,
-                        valueText: caseStudy.rules.traitThreshold.formatted(.number.precision(.fractionLength(2)))
-                    )
-                } else {
-                    largeThresholdSlider(
-                        title: caseStudy.kind == .predator ? "3. Vision must be at least" : "3. Speed must be at least",
-                        value: decisionBinding(caseStudy.id, keyPath: \.traitThreshold),
-                        range: 0.05...1.0,
-                        valueText: caseStudy.rules.traitThreshold.formatted(.number.precision(.fractionLength(2)))
-                    )
-                }
+            thresholdControls(for: caseStudy)
 
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Decision tree evaluation")
-                        .font(.title2.bold())
+            Divider()
 
-                    decisionBranch(
-                        label: "Energy",
-                        actual: organism.energy,
-                        threshold: caseStudy.rules.energyThreshold
-                    )
-                    decisionBranch(
-                        label: "Size",
-                        actual: organism.genome.size,
-                        threshold: caseStudy.rules.sizeThreshold
-                    )
+            Text("Tree structure")
+                .font(.title2.bold())
 
-                    decisionBranch(
-                        label: decisionTraitName(for: caseStudy),
-                        actual: decisionTraitValue(for: caseStudy),
-                        threshold: caseStudy.rules.traitThreshold
-                    )
+            decisionTreeDiagram(caseStudy)
 
-                    HStack {
-                        Text("Tree prediction")
+            Divider()
+
+            Text("Path for this organism")
+                .font(.title2.bold())
+
+            VStack(spacing: 12) {
+                ForEach(Array(engine.decisionPath(for: caseStudy).enumerated()), id: \.element.id) { index, node in
+                    HStack(spacing: 14) {
+                        Text("\(index + 1)")
                             .font(.title2.bold())
+                            .frame(width: 36, height: 36)
+                            .background(.thinMaterial, in: Circle())
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(node.question)
+                                .font(.title3.bold())
+
+                            Text("value \(node.value.formatted(.number.precision(.fractionLength(2))))  •  threshold \(node.threshold.formatted(.number.precision(.fractionLength(2))))")
+                                .font(.title3.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+
                         Spacer()
-                        Text(engine.decisionPrediction(for: caseStudy).rawValue)
-                            .font(.largeTitle.bold())
+
+                        Text(node.passed ? "YES" : "NO")
+                            .font(.title2.bold())
+
+                        Image(systemName: "arrow.right")
+
+                        Text(node.branchLabel)
+                            .font(.title3.bold())
                     }
+                    .padding(14)
+                    .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
                 }
             }
+
+            HStack {
+                Text("Final prediction")
+                    .font(.title2.bold())
+                Spacer()
+                Text(engine.decisionPrediction(for: caseStudy).rawValue)
+                    .font(.largeTitle.bold())
+            }
+            .padding(.top, 6)
         }
         .padding(18)
         .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private func thresholdControls(for caseStudy: DecisionTreeCase) -> some View {
+        VStack(spacing: 16) {
+            largeThresholdSlider(
+                title: "Energy threshold",
+                value: decisionBinding(caseStudy.id, keyPath: \.energyThreshold),
+                range: 0...140,
+                valueText: caseStudy.rules.energyThreshold.formatted(.number.precision(.fractionLength(0)))
+            )
+
+            largeThresholdSlider(
+                title: "Size threshold",
+                value: decisionBinding(caseStudy.id, keyPath: \.sizeThreshold),
+                range: 0.05...1.0,
+                valueText: caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2)))
+            )
+
+            if caseStudy.kind == .plant {
+                largeThresholdSlider(
+                    title: "Greenness threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.greenThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.greenThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+            } else {
+                largeThresholdSlider(
+                    title: "Speed threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.speedThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.speedThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                largeThresholdSlider(
+                    title: "Vision threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.visionThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.visionThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+            }
+
+            if caseStudy.kind == .herbivore {
+                largeThresholdSlider(
+                    title: "Visibility threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.visibilityThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.visibilityThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+            }
+        }
+    }
+
+    private func decisionTreeDiagram(_ caseStudy: DecisionTreeCase) -> some View {
+        VStack(spacing: 14) {
+            treeNode(
+                "ROOT: Enough energy?",
+                subtitle: "Energy ≥ \(caseStudy.rules.energyThreshold.formatted(.number.precision(.fractionLength(0))))"
+            )
+
+            treeSplit(
+                yes: "YES",
+                no: "NO",
+                yesDestination: secondTreeQuestion(for: caseStudy),
+                noDestination: "LEAF: Die"
+            )
+
+            HStack(alignment: .top, spacing: 18) {
+                VStack(spacing: 10) {
+                    treeNode(secondTreeQuestion(for: caseStudy), subtitle: secondTreeSubtitle(for: caseStudy))
+
+                    treeSplit(
+                        yes: "YES",
+                        no: "NO",
+                        yesDestination: thirdTreeQuestion(for: caseStudy),
+                        noDestination: alternateTreeQuestion(for: caseStudy)
+                    )
+                }
+
+                treeLeaf("Die")
+            }
+
+            HStack(alignment: .top, spacing: 18) {
+                treeNode(thirdTreeQuestion(for: caseStudy), subtitle: thirdTreeSubtitle(for: caseStudy))
+                treeNode(alternateTreeQuestion(for: caseStudy), subtitle: alternateTreeSubtitle(for: caseStudy))
+            }
+
+            HStack(spacing: 24) {
+                treeLeaf("Survive")
+                treeLeaf("Die")
+                treeLeaf("Survive")
+                treeLeaf("Die")
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func treeNode(_ title: String, subtitle: String) -> some View {
+        VStack(spacing: 5) {
+            Text(title)
+                .font(.title3.bold())
+                .multilineTextAlignment(.center)
+            Text(subtitle)
+                .font(.body.monospacedDigit())
+                .foregroundStyle(.secondary)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.primary.opacity(0.25), lineWidth: 2)
+        )
+    }
+
+    private func treeLeaf(_ title: String) -> some View {
+        Text("LEAF: \(title)")
+            .font(.title3.bold())
+            .padding(.horizontal, 18)
+            .padding(.vertical, 12)
+            .background(Color.secondary.opacity(0.12), in: Capsule())
+    }
+
+    private func treeSplit(yes: String, no: String, yesDestination: String, noDestination: String) -> some View {
+        HStack {
+            VStack {
+                Text(yes).font(.title3.bold())
+                Image(systemName: "arrow.down")
+                Text(yesDestination)
+                    .font(.body.bold())
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack {
+                Text(no).font(.title3.bold())
+                Image(systemName: "arrow.down")
+                Text(noDestination)
+                    .font(.body.bold())
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private func secondTreeQuestion(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant: return "Green enough?"
+        case .herbivore: return "Fast enough?"
+        case .predator: return "Vision good enough?"
+        }
+    }
+
+    private func secondTreeSubtitle(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant:
+            return "Green ≥ \(caseStudy.rules.greenThreshold.formatted(.number.precision(.fractionLength(2))))"
+        case .herbivore:
+            return "Speed ≥ \(caseStudy.rules.speedThreshold.formatted(.number.precision(.fractionLength(2))))"
+        case .predator:
+            return "Vision ≥ \(caseStudy.rules.visionThreshold.formatted(.number.precision(.fractionLength(2))))"
+        }
+    }
+
+    private func thirdTreeQuestion(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant: return "Large enough?"
+        case .herbivore: return "Vision good enough?"
+        case .predator: return "Fast enough?"
+        }
+    }
+
+    private func thirdTreeSubtitle(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant:
+            return "Size ≥ \(caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2))))"
+        case .herbivore:
+            return "Vision ≥ \(caseStudy.rules.visionThreshold.formatted(.number.precision(.fractionLength(2))))"
+        case .predator:
+            return "Speed ≥ \(caseStudy.rules.speedThreshold.formatted(.number.precision(.fractionLength(2))))"
+        }
+    }
+
+    private func alternateTreeQuestion(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant: return "Can size compensate?"
+        case .herbivore: return "Hard to spot?"
+        case .predator: return "Large enough to compensate?"
+        }
+    }
+
+    private func alternateTreeSubtitle(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant:
+            return "Size ≥ \(caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2))))"
+        case .herbivore:
+            return "Visibility ≤ \(caseStudy.rules.visibilityThreshold.formatted(.number.precision(.fractionLength(2))))"
+        case .predator:
+            return "Size ≥ \(caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2))))"
+        }
     }
 
     private var decisionTreeResults: some View {
@@ -595,38 +797,6 @@ struct ContentView: View {
                 }
             }
         )
-    }
-
-    private func decisionTraitValue(for caseStudy: DecisionTreeCase) -> Double {
-        switch caseStudy.kind {
-        case .plant: return caseStudy.organism.genome.green
-        case .herbivore: return caseStudy.organism.genome.speed
-        case .predator: return caseStudy.organism.genome.vision
-        }
-    }
-
-    private func decisionTraitName(for caseStudy: DecisionTreeCase) -> String {
-        switch caseStudy.kind {
-        case .plant: return "Green"
-        case .herbivore: return "Speed"
-        case .predator: return "Vision"
-        }
-    }
-
-    private func decisionBranch(label: String, actual: Double, threshold: Double) -> some View {
-        let passes = actual >= threshold
-        return HStack {
-            Text("\(label): \(actual.formatted(.number.precision(.fractionLength(2))))")
-                .font(.title3.monospacedDigit())
-            Spacer()
-            Image(systemName: passes ? "checkmark.circle.fill" : "xmark.circle.fill")
-            Text(passes ? "YES" : "NO")
-                .font(.title3.bold())
-            Text("≥ \(threshold.formatted(.number.precision(.fractionLength(2))))")
-                .font(.title3.monospacedDigit())
-                .foregroundStyle(.secondary)
-        }
-        .padding(.vertical, 4)
     }
 
     private func largeThresholdSlider(
