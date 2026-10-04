@@ -87,12 +87,12 @@ struct Organism: Identifiable, Equatable {
 }
 
 struct SimulationConfiguration {
-    var plantCount: Int = 26
-    var herbivoreCount: Int = 20
-    var predatorCount: Int = 6
+    var plantCount: Int = 40
+    var herbivoreCount: Int = 35
+    var predatorCount: Int = 15
     var simulationDuration: Double = 10
     var mutationRate: Double = 0.08
-    var minimumAnimalSurvivors: Int = 8
+    var minimumAnimalSurvivors: Int = 20
 
     var animalCount: Int {
         herbivoreCount + predatorCount
