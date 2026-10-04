@@ -591,7 +591,7 @@ final class SimulationEngine: ObservableObject {
     }
 
     private func prepareDecisionTreeCases() {
-        guard decisionTreeMode || decisionTreeCases.isEmpty else { return }
+        guard decisionTreeMode else { return }
 
         let kinds: [OrganismKind] = [.plant, .herbivore, .predator]
         decisionTreeCases = kinds.compactMap { kind in
