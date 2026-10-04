@@ -157,12 +157,13 @@ struct ContentView: View {
                 .font(.largeTitle.bold())
 
             Text(engine.step.explanation)
+                .font(.title3)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let status = engine.statusMessage {
                 Label(status, systemImage: "info.circle.fill")
-                    .font(.callout)
+                    .font(.body)
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
@@ -173,7 +174,7 @@ struct ContentView: View {
 
     private var simulationPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
+            HStack(spacing: 14) {
                 Text("✿ Plant")
                 Divider().frame(height: 18)
                 Text("◆ Herbivore")
@@ -187,7 +188,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .font(.body)
+            .font(.title3.bold())
 
             GeometryReader { proxy in
                 ZStack {
@@ -312,7 +313,7 @@ struct ContentView: View {
 
         return VStack(alignment: .leading, spacing: 14) {
             Text("Fitness converts survival into a number")
-                .font(.headline)
+                .font(.title2.bold())
 
             Text("The whole population is scored first. Below are four concrete survivors so you can connect their visible phenotype with the fitness value used by selection.")
                 .foregroundStyle(.secondary)
@@ -337,7 +338,7 @@ struct ContentView: View {
 
         return VStack(alignment: .leading, spacing: 14) {
             Text("Selection chooses parents probabilistically")
-                .font(.headline)
+                .font(.title2.bold())
 
             Text("Selection happens independently inside each type. Plants compete with plants, herbivores with herbivores, and predators with predators. Higher fitness increases the probability of being sampled.")
                 .foregroundStyle(.secondary)
@@ -366,7 +367,7 @@ struct ContentView: View {
     private var crossoverExplanation: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Crossover mixes DNA from two same-type parents")
-                .font(.headline)
+                .font(.title2.bold())
 
             Text("These are actual parent pairings used to create offspring in this generation. Each row shows the two parents, the child that was produced, and which genes came from Parent A. All remaining genes came from Parent B.")
                 .foregroundStyle(.secondary)
@@ -386,7 +387,7 @@ struct ContentView: View {
     private var mutationExplanation: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Mutation changes offspring after crossover")
-                .font(.headline)
+                .font(.title2.bold())
 
             Text("Four offspring are sampled from the real population. Each has the configured mutation probability. Some examples may show no mutation at all—that is part of the algorithm.")
                 .foregroundStyle(.secondary)
@@ -401,7 +402,7 @@ struct ContentView: View {
     private var newGenerationExplanation: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("The offspring become Generation \(engine.generation)")
-                .font(.headline)
+                .font(.title2.bold())
 
             Text("The full offspring population now replaces the previous generation. Here are four examples of organisms that actually entered the new population.")
                 .foregroundStyle(.secondary)
@@ -502,25 +503,9 @@ struct ContentView: View {
                         threshold: caseStudy.rules.sizeThreshold
                     )
 
-                    let traitValue: Double = {
-                        switch caseStudy.kind {
-                        case .plant: return organism.genome.green
-                        case .herbivore: return organism.genome.speed
-                        case .predator: return organism.genome.vision
-                        }
-                    }()
-
-                    let traitName: String = {
-                        switch caseStudy.kind {
-                        case .plant: return "Green"
-                        case .herbivore: return "Speed"
-                        case .predator: return "Vision"
-                        }
-                    }()
-
                     decisionBranch(
-                        label: traitName,
-                        actual: traitValue,
+                        label: decisionTraitName(for: caseStudy),
+                        actual: decisionTraitValue(for: caseStudy),
                         threshold: caseStudy.rules.traitThreshold
                     )
 
@@ -604,6 +589,22 @@ struct ContentView: View {
                 }
             }
         )
+    }
+
+    private func decisionTraitValue(for caseStudy: DecisionTreeCase) -> Double {
+        switch caseStudy.kind {
+        case .plant: return caseStudy.organism.genome.green
+        case .herbivore: return caseStudy.organism.genome.speed
+        case .predator: return caseStudy.organism.genome.vision
+        }
+    }
+
+    private func decisionTraitName(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant: return "Green"
+        case .herbivore: return "Speed"
+        case .predator: return "Vision"
+        }
     }
 
     private func decisionBranch(label: String, actual: Double, threshold: Double) -> some View {
@@ -746,12 +747,12 @@ struct ContentView: View {
                    let old = example.oldValue,
                    let new = example.newValue {
                     Text("\(gene.capitalized) mutated")
-                        .font(.headline)
+                        .font(.title2.bold())
                     Text("\(old.formatted(.number.precision(.fractionLength(2)))) → \(new.formatted(.number.precision(.fractionLength(2))))")
                         .font(.title3.monospacedDigit().bold())
                 } else {
                     Text("No mutation")
-                        .font(.headline)
+                        .font(.title2.bold())
                     Text("This offspring passed through mutation unchanged.")
                         .foregroundStyle(.secondary)
                 }
@@ -873,7 +874,7 @@ struct ContentView: View {
 
         return VStack(alignment: .leading, spacing: 10) {
             Text("Population snapshot")
-                .font(.headline)
+                .font(.title2.bold())
 
             Grid(horizontalSpacing: 24, verticalSpacing: 8) {
                 GridRow {
@@ -910,7 +911,7 @@ struct ContentView: View {
     private func conceptCard(title: String, body: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title)
-                .font(.headline)
+                .font(.title2.bold())
             Text(body)
                 .foregroundStyle(.secondary)
         }
