@@ -472,12 +472,12 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
 
-            thresholdControls(for: caseStudy)
-
-            Divider()
-
-            Text("Tree structure")
+            Text("Tree structure — move the sliders inside the nodes")
                 .font(.title2.bold())
+
+            Text("The green tint shows the route this specimen currently takes. As you change a threshold, the highlighted path updates immediately.")
+                .font(.title3)
+                .foregroundStyle(.secondary)
 
             decisionTreeDiagram(caseStudy)
 
@@ -532,114 +532,6 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func thresholdControls(for caseStudy: DecisionTreeCase) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Node thresholds")
-                .font(.title2.bold())
-
-            Text("A feature may appear in several nodes with different thresholds. That is normal in a decision tree: earlier branches restrict which specimens reach each later split.")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-
-            largeThresholdSlider(
-                title: "Root: minimum energy",
-                value: decisionBinding(caseStudy.id, keyPath: \.energyLowThreshold),
-                range: 0...120,
-                valueText: caseStudy.rules.energyLowThreshold.formatted(.number.precision(.fractionLength(0)))
-            )
-
-            largeThresholdSlider(
-                title: "Second energy split: high energy",
-                value: decisionBinding(caseStudy.id, keyPath: \.energyHighThreshold),
-                range: 40...140,
-                valueText: caseStudy.rules.energyHighThreshold.formatted(.number.precision(.fractionLength(0)))
-            )
-
-            switch caseStudy.kind {
-            case .plant:
-                largeThresholdSlider(
-                    title: "High-energy branch: greenness",
-                    value: decisionBinding(caseStudy.id, keyPath: \.plantGreenHighThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.plantGreenHighThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Green branch: size threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.plantSizeIfGreenThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.plantSizeIfGreenThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Less-green / medium-energy branch: size threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.plantSizeIfNotGreenThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.plantSizeIfNotGreenThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-            case .herbivore:
-                largeThresholdSlider(
-                    title: "High-energy branch: speed threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreSpeedHighEnergyThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.herbivoreSpeedHighEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Medium-energy branch: speed threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreSpeedMediumEnergyThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.herbivoreSpeedMediumEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Fast branch: vision threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreVisionFastThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.herbivoreVisionFastThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Medium-energy branch: visibility threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreCamouflageSlowThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.herbivoreCamouflageSlowThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-            case .predator:
-                largeThresholdSlider(
-                    title: "High-energy branch: vision threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.predatorVisionHighEnergyThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.predatorVisionHighEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Medium-energy branch: vision threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.predatorVisionMediumEnergyThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.predatorVisionMediumEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Good-vision branch: speed threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.predatorSpeedGoodVisionThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.predatorSpeedGoodVisionThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-
-                largeThresholdSlider(
-                    title: "Medium-energy branch: size threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.predatorSizePoorVisionThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.predatorSizePoorVisionThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-            }
-        }
-    }
-
-    @ViewBuilder
     private func decisionTreeDiagram(_ caseStudy: DecisionTreeCase) -> some View {
         switch caseStudy.kind {
         case .plant:
@@ -652,154 +544,374 @@ struct ContentView: View {
     }
 
     private func plantDecisionTree(_ c: DecisionTreeCase) -> some View {
-        VStack(spacing: 16) {
-            treeNode("ROOT: Energy ≥ \(fmt(c.rules.energyLowThreshold))?", subtitle: "NO → Die | YES → next energy split")
-            treeConnector("YES")
-            treeNode("Energy ≥ \(fmt(c.rules.energyHighThreshold))?", subtitle: "YES and NO lead to different subtrees")
+        let o = c.organism
+        let enoughEnergy = o.energy >= c.rules.energyLowThreshold
+        let highEnergy = enoughEnergy && o.energy >= c.rules.energyHighThreshold
+        let greenHigh = highEnergy && o.genome.green >= c.rules.plantGreenHighThreshold
+        let greenMedium = enoughEnergy && !highEnergy && o.genome.green >= c.rules.plantGreenHighThreshold
+        let sizeGreen = greenHigh && o.genome.size >= c.rules.plantSizeIfGreenThreshold
+        let sizeCompensate = highEnergy && !greenHigh && o.genome.size >= c.rules.plantSizeIfNotGreenThreshold
+        let sizeMedium = greenMedium && o.genome.size >= c.rules.plantSizeIfNotGreenThreshold
+
+        return VStack(spacing: 14) {
+            treeEditableNode(
+                "ROOT: Enough energy?",
+                value: decisionBinding(c.id, keyPath: \.energyLowThreshold),
+                range: 0...120,
+                valueText: fmt(c.rules.energyLowThreshold),
+                active: true
+            )
 
             HStack(alignment: .top, spacing: 18) {
                 VStack(spacing: 10) {
-                    treeBranchLabel("YES — high energy")
-                    treeNode("Green ≥ \(fmt(c.rules.plantGreenHighThreshold))?", subtitle: "Different size rule on each branch")
-                    HStack(spacing: 12) {
-                        VStack {
-                            treeBranchLabel("YES")
-                            treeNode("Size ≥ \(fmt(c.rules.plantSizeIfGreenThreshold))?", subtitle: "")
-                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                    treeBranchLabel("YES", active: enoughEnergy)
+                    treeEditableNode(
+                        "Is energy high?",
+                        value: decisionBinding(c.id, keyPath: \.energyHighThreshold),
+                        range: 40...140,
+                        valueText: fmt(c.rules.energyHighThreshold),
+                        active: enoughEnergy
+                    )
+
+                    HStack(alignment: .top, spacing: 14) {
+                        VStack(spacing: 8) {
+                            treeBranchLabel("YES — high energy", active: highEnergy)
+                            treeEditableNode(
+                                "Is the plant very green?",
+                                value: decisionBinding(c.id, keyPath: \.plantGreenHighThreshold),
+                                range: 0.05...1.0,
+                                valueText: fmt(c.rules.plantGreenHighThreshold),
+                                active: highEnergy
+                            )
+
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("YES", active: greenHigh)
+                                    treeEditableNode(
+                                        "Large enough on green branch?",
+                                        value: decisionBinding(c.id, keyPath: \.plantSizeIfGreenThreshold),
+                                        range: 0.05...1.0,
+                                        valueText: fmt(c.rules.plantSizeIfGreenThreshold),
+                                        active: greenHigh
+                                    )
+                                    HStack {
+                                        treeLeaf("Survive", active: sizeGreen)
+                                        treeLeaf("Die", active: greenHigh && !sizeGreen)
+                                    }
+                                }
+
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("NO", active: highEnergy && !greenHigh)
+                                    treeEditableNode(
+                                        "Large enough to compensate?",
+                                        value: decisionBinding(c.id, keyPath: \.plantSizeIfNotGreenThreshold),
+                                        range: 0.05...1.0,
+                                        valueText: fmt(c.rules.plantSizeIfNotGreenThreshold),
+                                        active: highEnergy && !greenHigh
+                                    )
+                                    HStack {
+                                        treeLeaf("Survive", active: sizeCompensate)
+                                        treeLeaf("Die", active: highEnergy && !greenHigh && !sizeCompensate)
+                                    }
+                                }
+                            }
                         }
-                        VStack {
-                            treeBranchLabel("NO")
-                            treeNode("Size ≥ \(fmt(c.rules.plantSizeIfNotGreenThreshold))?", subtitle: "")
-                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+
+                        VStack(spacing: 8) {
+                            treeBranchLabel("NO — medium energy", active: enoughEnergy && !highEnergy)
+                            treeEditableNode(
+                                "Green enough with medium energy?",
+                                value: decisionBinding(c.id, keyPath: \.plantGreenHighThreshold),
+                                range: 0.05...1.0,
+                                valueText: fmt(c.rules.plantGreenHighThreshold),
+                                active: enoughEnergy && !highEnergy
+                            )
+
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("YES", active: greenMedium)
+                                    treeEditableNode(
+                                        "Large enough on medium-energy branch?",
+                                        value: decisionBinding(c.id, keyPath: \.plantSizeIfNotGreenThreshold),
+                                        range: 0.05...1.0,
+                                        valueText: fmt(c.rules.plantSizeIfNotGreenThreshold),
+                                        active: greenMedium
+                                    )
+                                    HStack {
+                                        treeLeaf("Survive", active: sizeMedium)
+                                        treeLeaf("Die", active: greenMedium && !sizeMedium)
+                                    }
+                                }
+
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("NO", active: enoughEnergy && !highEnergy && !greenMedium)
+                                    treeLeaf("Die", active: enoughEnergy && !highEnergy && !greenMedium)
+                                }
+                            }
                         }
                     }
                 }
 
                 VStack(spacing: 10) {
-                    treeBranchLabel("NO — medium energy")
-                    treeNode("Green ≥ \(fmt(c.rules.plantGreenHighThreshold))?", subtitle: "")
-                    HStack(spacing: 12) {
-                        VStack {
-                            treeBranchLabel("YES")
-                            treeNode("Size ≥ \(fmt(c.rules.plantSizeIfNotGreenThreshold))?", subtitle: "")
-                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
-                        }
-                        VStack {
-                            treeBranchLabel("NO")
-                            treeLeaf("Die")
-                        }
-                    }
+                    treeBranchLabel("NO", active: !enoughEnergy)
+                    treeLeaf("Die", active: !enoughEnergy)
                 }
+                .frame(maxWidth: 180)
             }
         }
     }
 
     private func herbivoreDecisionTree(_ c: DecisionTreeCase) -> some View {
-        VStack(spacing: 16) {
-            treeNode("ROOT: Energy ≥ \(fmt(c.rules.energyLowThreshold))?", subtitle: "NO → Die")
-            treeConnector("YES")
-            treeNode("Energy ≥ \(fmt(c.rules.energyHighThreshold))?", subtitle: "This split chooses which speed threshold applies")
+        let o = c.organism
+        let enoughEnergy = o.energy >= c.rules.energyLowThreshold
+        let highEnergy = enoughEnergy && o.energy >= c.rules.energyHighThreshold
+        let fastHigh = highEnergy && o.genome.speed >= c.rules.herbivoreSpeedHighEnergyThreshold
+        let visionHigh = fastHigh && o.genome.vision >= c.rules.herbivoreVisionFastThreshold
+        let fastMedium = enoughEnergy && !highEnergy && o.genome.speed >= c.rules.herbivoreSpeedMediumEnergyThreshold
+        let camouflage = fastMedium && o.genome.visibility <= c.rules.herbivoreCamouflageSlowThreshold
+
+        return VStack(spacing: 14) {
+            treeEditableNode(
+                "ROOT: Enough energy?",
+                value: decisionBinding(c.id, keyPath: \.energyLowThreshold),
+                range: 0...120,
+                valueText: fmt(c.rules.energyLowThreshold),
+                active: true
+            )
 
             HStack(alignment: .top, spacing: 18) {
                 VStack(spacing: 10) {
-                    treeBranchLabel("YES — high energy")
-                    treeNode("Speed ≥ \(fmt(c.rules.herbivoreSpeedHighEnergyThreshold))?", subtitle: "Stricter speed split")
-                    HStack(spacing: 12) {
-                        VStack {
-                            treeBranchLabel("YES")
-                            treeNode("Vision ≥ \(fmt(c.rules.herbivoreVisionFastThreshold))?", subtitle: "")
-                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                    treeBranchLabel("YES", active: enoughEnergy)
+                    treeEditableNode(
+                        "Is energy high?",
+                        value: decisionBinding(c.id, keyPath: \.energyHighThreshold),
+                        range: 40...140,
+                        valueText: fmt(c.rules.energyHighThreshold),
+                        active: enoughEnergy
+                    )
+
+                    HStack(alignment: .top, spacing: 14) {
+                        VStack(spacing: 8) {
+                            treeBranchLabel("YES — high energy", active: highEnergy)
+                            treeEditableNode(
+                                "Fast enough on high-energy branch?",
+                                value: decisionBinding(c.id, keyPath: \.herbivoreSpeedHighEnergyThreshold),
+                                range: 0.05...1.0,
+                                valueText: fmt(c.rules.herbivoreSpeedHighEnergyThreshold),
+                                active: highEnergy
+                            )
+
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("YES", active: fastHigh)
+                                    treeEditableNode(
+                                        "Vision good enough after fast branch?",
+                                        value: decisionBinding(c.id, keyPath: \.herbivoreVisionFastThreshold),
+                                        range: 0.05...1.0,
+                                        valueText: fmt(c.rules.herbivoreVisionFastThreshold),
+                                        active: fastHigh
+                                    )
+                                    HStack {
+                                        treeLeaf("Survive", active: visionHigh)
+                                        treeLeaf("Die", active: fastHigh && !visionHigh)
+                                    }
+                                }
+
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("NO", active: highEnergy && !fastHigh)
+                                    treeLeaf("Die", active: highEnergy && !fastHigh)
+                                }
+                            }
                         }
-                        VStack {
-                            treeBranchLabel("NO")
-                            treeLeaf("Die")
+
+                        VStack(spacing: 8) {
+                            treeBranchLabel("NO — medium energy", active: enoughEnergy && !highEnergy)
+                            treeEditableNode(
+                                "Fast enough on medium-energy branch?",
+                                value: decisionBinding(c.id, keyPath: \.herbivoreSpeedMediumEnergyThreshold),
+                                range: 0.05...1.0,
+                                valueText: fmt(c.rules.herbivoreSpeedMediumEnergyThreshold),
+                                active: enoughEnergy && !highEnergy
+                            )
+
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("YES", active: fastMedium)
+                                    treeEditableNode(
+                                        "Visibility low enough?",
+                                        value: decisionBinding(c.id, keyPath: \.herbivoreCamouflageSlowThreshold),
+                                        range: 0.05...1.0,
+                                        valueText: fmt(c.rules.herbivoreCamouflageSlowThreshold),
+                                        active: fastMedium,
+                                        comparison: "≤"
+                                    )
+                                    HStack {
+                                        treeLeaf("Survive", active: camouflage)
+                                        treeLeaf("Die", active: fastMedium && !camouflage)
+                                    }
+                                }
+
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("NO", active: enoughEnergy && !highEnergy && !fastMedium)
+                                    treeLeaf("Die", active: enoughEnergy && !highEnergy && !fastMedium)
+                                }
+                            }
                         }
                     }
                 }
 
                 VStack(spacing: 10) {
-                    treeBranchLabel("NO — medium energy")
-                    treeNode("Speed ≥ \(fmt(c.rules.herbivoreSpeedMediumEnergyThreshold))?", subtitle: "Different, lower speed split")
-                    HStack(spacing: 12) {
-                        VStack {
-                            treeBranchLabel("YES")
-                            treeNode("Visibility ≤ \(fmt(c.rules.herbivoreCamouflageSlowThreshold))?", subtitle: "")
-                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
-                        }
-                        VStack {
-                            treeBranchLabel("NO")
-                            treeLeaf("Die")
-                        }
-                    }
+                    treeBranchLabel("NO", active: !enoughEnergy)
+                    treeLeaf("Die", active: !enoughEnergy)
                 }
+                .frame(maxWidth: 180)
             }
         }
     }
 
     private func predatorDecisionTree(_ c: DecisionTreeCase) -> some View {
-        VStack(spacing: 16) {
-            treeNode("ROOT: Energy ≥ \(fmt(c.rules.energyLowThreshold))?", subtitle: "NO → Die")
-            treeConnector("YES")
-            treeNode("Energy ≥ \(fmt(c.rules.energyHighThreshold))?", subtitle: "Different vision thresholds by energy branch")
+        let o = c.organism
+        let enoughEnergy = o.energy >= c.rules.energyLowThreshold
+        let highEnergy = enoughEnergy && o.energy >= c.rules.energyHighThreshold
+        let visionHigh = highEnergy && o.genome.vision >= c.rules.predatorVisionHighEnergyThreshold
+        let speedHigh = visionHigh && o.genome.speed >= c.rules.predatorSpeedGoodVisionThreshold
+        let visionMedium = enoughEnergy && !highEnergy && o.genome.vision >= c.rules.predatorVisionMediumEnergyThreshold
+        let sizeMedium = visionMedium && o.genome.size >= c.rules.predatorSizePoorVisionThreshold
+
+        return VStack(spacing: 14) {
+            treeEditableNode(
+                "ROOT: Enough energy?",
+                value: decisionBinding(c.id, keyPath: \.energyLowThreshold),
+                range: 0...120,
+                valueText: fmt(c.rules.energyLowThreshold),
+                active: true
+            )
 
             HStack(alignment: .top, spacing: 18) {
                 VStack(spacing: 10) {
-                    treeBranchLabel("YES — high energy")
-                    treeNode("Vision ≥ \(fmt(c.rules.predatorVisionHighEnergyThreshold))?", subtitle: "")
-                    HStack(spacing: 12) {
-                        VStack {
-                            treeBranchLabel("YES")
-                            treeNode("Speed ≥ \(fmt(c.rules.predatorSpeedGoodVisionThreshold))?", subtitle: "")
-                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                    treeBranchLabel("YES", active: enoughEnergy)
+                    treeEditableNode(
+                        "Is energy high?",
+                        value: decisionBinding(c.id, keyPath: \.energyHighThreshold),
+                        range: 40...140,
+                        valueText: fmt(c.rules.energyHighThreshold),
+                        active: enoughEnergy
+                    )
+
+                    HStack(alignment: .top, spacing: 14) {
+                        VStack(spacing: 8) {
+                            treeBranchLabel("YES — high energy", active: highEnergy)
+                            treeEditableNode(
+                                "Vision good enough on high-energy branch?",
+                                value: decisionBinding(c.id, keyPath: \.predatorVisionHighEnergyThreshold),
+                                range: 0.05...1.0,
+                                valueText: fmt(c.rules.predatorVisionHighEnergyThreshold),
+                                active: highEnergy
+                            )
+
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("YES", active: visionHigh)
+                                    treeEditableNode(
+                                        "Fast enough after good vision?",
+                                        value: decisionBinding(c.id, keyPath: \.predatorSpeedGoodVisionThreshold),
+                                        range: 0.05...1.0,
+                                        valueText: fmt(c.rules.predatorSpeedGoodVisionThreshold),
+                                        active: visionHigh
+                                    )
+                                    HStack {
+                                        treeLeaf("Survive", active: speedHigh)
+                                        treeLeaf("Die", active: visionHigh && !speedHigh)
+                                    }
+                                }
+
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("NO", active: highEnergy && !visionHigh)
+                                    treeLeaf("Die", active: highEnergy && !visionHigh)
+                                }
+                            }
                         }
-                        VStack {
-                            treeBranchLabel("NO")
-                            treeLeaf("Die")
+
+                        VStack(spacing: 8) {
+                            treeBranchLabel("NO — medium energy", active: enoughEnergy && !highEnergy)
+                            treeEditableNode(
+                                "Vision good enough on medium-energy branch?",
+                                value: decisionBinding(c.id, keyPath: \.predatorVisionMediumEnergyThreshold),
+                                range: 0.05...1.0,
+                                valueText: fmt(c.rules.predatorVisionMediumEnergyThreshold),
+                                active: enoughEnergy && !highEnergy
+                            )
+
+                            HStack(alignment: .top, spacing: 10) {
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("YES", active: visionMedium)
+                                    treeEditableNode(
+                                        "Large enough to compensate?",
+                                        value: decisionBinding(c.id, keyPath: \.predatorSizePoorVisionThreshold),
+                                        range: 0.05...1.0,
+                                        valueText: fmt(c.rules.predatorSizePoorVisionThreshold),
+                                        active: visionMedium
+                                    )
+                                    HStack {
+                                        treeLeaf("Survive", active: sizeMedium)
+                                        treeLeaf("Die", active: visionMedium && !sizeMedium)
+                                    }
+                                }
+
+                                VStack(spacing: 8) {
+                                    treeBranchLabel("NO", active: enoughEnergy && !highEnergy && !visionMedium)
+                                    treeLeaf("Die", active: enoughEnergy && !highEnergy && !visionMedium)
+                                }
+                            }
                         }
                     }
                 }
 
                 VStack(spacing: 10) {
-                    treeBranchLabel("NO — medium energy")
-                    treeNode("Vision ≥ \(fmt(c.rules.predatorVisionMediumEnergyThreshold))?", subtitle: "Lower vision threshold on this branch")
-                    HStack(spacing: 12) {
-                        VStack {
-                            treeBranchLabel("YES")
-                            treeNode("Size ≥ \(fmt(c.rules.predatorSizePoorVisionThreshold))?", subtitle: "")
-                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
-                        }
-                        VStack {
-                            treeBranchLabel("NO")
-                            treeLeaf("Die")
-                        }
-                    }
+                    treeBranchLabel("NO", active: !enoughEnergy)
+                    treeLeaf("Die", active: !enoughEnergy)
                 }
+                .frame(maxWidth: 180)
             }
         }
     }
 
-    private func treeNode(_ title: String, subtitle: String) -> some View {
-        VStack(spacing: 5) {
-            Text(title)
-                .font(.title3.bold())
-                .multilineTextAlignment(.center)
-            if !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(.body)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
+    private func treeEditableNode(
+        _ title: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        valueText: String,
+        active: Bool,
+        comparison: String = "≥"
+    ) -> some View {
+        VStack(spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.title3.bold())
+                    .multilineTextAlignment(.leading)
+
+                Spacer()
+
+                Text("\(comparison) \(valueText)")
+                    .font(.title3.monospacedDigit().bold())
             }
+
+            Slider(value: value, in: range)
+                .controlSize(.regular)
         }
         .padding(14)
-        .frame(maxWidth: .infinity)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .frame(maxWidth: .infinity, minHeight: 108)
+        .background(
+            active ? Color.green.opacity(0.14) : Color.secondary.opacity(0.05),
+            in: RoundedRectangle(cornerRadius: 14)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.primary.opacity(0.28), lineWidth: 2)
+                .stroke(active ? Color.green.opacity(0.65) : Color.primary.opacity(0.28), lineWidth: active ? 3 : 2)
         )
     }
 
-    private func treeLeaf(_ title: String) -> some View {
+    private func treeLeaf(_ title: String, active: Bool) -> some View {
         VStack(spacing: 5) {
             Text("LEAF")
                 .font(.body.bold())
@@ -811,10 +923,13 @@ struct ContentView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, minHeight: 78)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
+        .background(
+            active ? Color.green.opacity(0.14) : Color.secondary.opacity(0.05),
+            in: RoundedRectangle(cornerRadius: 14)
+        )
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.primary.opacity(0.28), lineWidth: 2)
+                .stroke(active ? Color.green.opacity(0.65) : Color.primary.opacity(0.28), lineWidth: active ? 3 : 2)
         )
     }
 
@@ -826,12 +941,15 @@ struct ContentView: View {
         }
     }
 
-    private func treeBranchLabel(_ text: String) -> some View {
+    private func treeBranchLabel(_ text: String, active: Bool) -> some View {
         Text(text)
             .font(.title3.bold())
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
-            .background(Color.secondary.opacity(0.10), in: Capsule())
+            .background(
+                active ? Color.green.opacity(0.18) : Color.secondary.opacity(0.10),
+                in: Capsule()
+            )
     }
 
     private func fmt(_ value: Double) -> String {
@@ -904,26 +1022,6 @@ struct ContentView: View {
                 }
             }
         )
-    }
-
-    private func largeThresholdSlider(
-        title: String,
-        value: Binding<Double>,
-        range: ClosedRange<Double>,
-        valueText: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(title)
-                    .font(.title3.bold())
-                Spacer()
-                Text(valueText)
-                    .font(.title2.monospacedDigit().bold())
-            }
-
-            Slider(value: value, in: range)
-                .controlSize(.large)
-        }
     }
 
     private func aggregateFitnessTable(ranked: [Organism]) -> some View {
