@@ -1,6 +1,6 @@
 import SwiftUI
 
-enum OrganismKind: String, CaseIterable, Codable {
+enum OrganismKind: String, CaseIterable, Codable, Hashable {
     case plant
     case herbivore
     case predator
@@ -182,4 +182,43 @@ struct GenerationStatistics {
     var livingPlants: Int = 0
     var livingHerbivores: Int = 0
     var livingPredators: Int = 0
+}
+
+
+enum DecisionOutcome: String, CaseIterable, Identifiable {
+    case survive = "Survive"
+    case die = "Die"
+
+    var id: String { rawValue }
+}
+
+struct DecisionTreeRules {
+    var energyThreshold: Double = 70
+    var sizeThreshold: Double = 0.50
+    var traitThreshold: Double = 0.50
+    var requireGreen: Bool = true
+    var predictedOutcome: DecisionOutcome = .survive
+}
+
+struct DecisionTreeCase: Identifiable {
+    let id = UUID()
+    let organismID: UUID
+    let kind: OrganismKind
+    let organism: Organism
+    var rules: DecisionTreeRules
+
+    var title: String {
+        "\(kind.symbol) \(kind.title)"
+    }
+}
+
+struct DecisionTreeResult: Identifiable {
+    let id = UUID()
+    let caseStudy: DecisionTreeCase
+    let predicted: DecisionOutcome
+    let actual: DecisionOutcome
+
+    var wasCorrect: Bool {
+        predicted == actual
+    }
 }
