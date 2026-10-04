@@ -193,12 +193,22 @@ enum DecisionOutcome: String, CaseIterable, Identifiable {
 }
 
 struct DecisionTreeRules {
-    var energyThreshold: Double = 70
-    var sizeThreshold: Double = 0.50
-    var speedThreshold: Double = 0.50
-    var visionThreshold: Double = 0.50
-    var greenThreshold: Double = 0.55
-    var visibilityThreshold: Double = 0.55
+    var energyLowThreshold: Double = 55
+    var energyHighThreshold: Double = 90
+
+    var plantGreenHighThreshold: Double = 0.60
+    var plantSizeIfGreenThreshold: Double = 0.40
+    var plantSizeIfNotGreenThreshold: Double = 0.70
+
+    var herbivoreSpeedHighEnergyThreshold: Double = 0.62
+    var herbivoreSpeedMediumEnergyThreshold: Double = 0.42
+    var herbivoreVisionFastThreshold: Double = 0.48
+    var herbivoreCamouflageSlowThreshold: Double = 0.45
+
+    var predatorVisionHighEnergyThreshold: Double = 0.60
+    var predatorVisionMediumEnergyThreshold: Double = 0.40
+    var predatorSpeedGoodVisionThreshold: Double = 0.58
+    var predatorSizePoorVisionThreshold: Double = 0.68
 }
 
 struct DecisionTreeNodeResult: Identifiable {
