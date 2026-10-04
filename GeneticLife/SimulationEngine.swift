@@ -12,6 +12,8 @@ final class SimulationEngine: ObservableObject {
     @Published var automaticMode = false
     @Published private(set) var selectedParents: [Organism] = []
     @Published private(set) var offspring: [Organism] = []
+    @Published private(set) var crossoverExamples: [CrossoverExample] = []
+    @Published private(set) var mutationExamples: [MutationExample] = []
     @Published private(set) var mutatedGeneDescription: String?
     @Published private(set) var statusMessage: String?
 
@@ -38,6 +40,8 @@ final class SimulationEngine: ObservableObject {
         elapsedTime = 0
         selectedParents = []
         offspring = []
+        crossoverExamples = []
+        mutationExamples = []
         mutatedGeneDescription = nil
         statusMessage = nil
         organisms = makeRandomPopulation()
@@ -79,6 +83,8 @@ final class SimulationEngine: ObservableObject {
             step = .initialPopulation
             selectedParents = []
             offspring = []
+            crossoverExamples = []
+            mutationExamples = []
             mutatedGeneDescription = nil
             statusMessage = nil
             scheduleAutomaticAdvanceIfNeeded()
@@ -375,6 +381,7 @@ final class SimulationEngine: ObservableObject {
 
     private func performCrossover() {
         offspring = []
+        crossoverExamples = []
         offspring += makeOffspring(kind: .plant, count: configuration.plantCount)
         offspring += makeOffspring(kind: .herbivore, count: configuration.herbivoreCount)
         offspring += makeOffspring(kind: .predator, count: configuration.predatorCount)
@@ -382,82 +389,146 @@ final class SimulationEngine: ObservableObject {
 
     private func makeOffspring(kind: OrganismKind, count: Int) -> [Organism] {
         let parents = selectedParents.filter { $0.genome.kind == kind }
+        var created: [Organism] = []
 
-        return (0..<count).map { _ in
+        for _ in 0..<count {
             let genome: Genome
+            var parentA: Organism?
+            var parentB: Organism?
+            var inheritedFromA: [String] = []
+
             if let a = parents.randomElement(), let b = parents.randomElement() {
-                genome = crossoverSameType(a.genome, b.genome)
+                let result = crossoverSameType(a.genome, b.genome)
+                genome = result.genome
+                inheritedFromA = result.inheritedFromA
+                parentA = a
+                parentB = b
             } else {
                 genome = .random(kind: kind)
             }
 
-            return Organism(
+            let child = Organism(
                 genome: genome,
                 position: randomPosition(),
                 velocity: kind == .plant ? .zero : randomVelocity(speed: 22 + genome.speed * 68)
             )
+            created.append(child)
+
+            if crossoverExamples.count < 4, let parentA, let parentB {
+                crossoverExamples.append(
+                    CrossoverExample(
+                        parentA: parentA,
+                        parentB: parentB,
+                        child: child,
+                        inheritedFromA: inheritedFromA
+                    )
+                )
+            }
         }
+
+        return created
     }
 
-    private func crossoverSameType(_ a: Genome, _ b: Genome) -> Genome {
+    private func crossoverSameType(_ a: Genome, _ b: Genome) -> (genome: Genome, inheritedFromA: [String]) {
         precondition(a.kind == b.kind, "Crossover is only valid between organisms of the same type.")
 
-        return Genome(
-            kind: a.kind,
-            size: Bool.random() ? a.size : b.size,
-            speed: a.kind == .plant ? 0 : (Bool.random() ? a.speed : b.speed),
-            vision: a.kind == .plant ? 0 : (Bool.random() ? a.vision : b.vision),
-            red: Bool.random() ? a.red : b.red,
-            green: Bool.random() ? a.green : b.green,
-            blue: Bool.random() ? a.blue : b.blue
+        let sizeFromA = Bool.random()
+        let speedFromA = Bool.random()
+        let visionFromA = Bool.random()
+        let redFromA = Bool.random()
+        let greenFromA = Bool.random()
+        let blueFromA = Bool.random()
+
+        var inherited: [String] = []
+        if sizeFromA { inherited.append("size") }
+        if a.kind != .plant && speedFromA { inherited.append("speed") }
+        if a.kind != .plant && visionFromA { inherited.append("vision") }
+        if redFromA { inherited.append("red") }
+        if greenFromA { inherited.append("green") }
+        if blueFromA { inherited.append("blue") }
+
+        return (
+            Genome(
+                kind: a.kind,
+                size: sizeFromA ? a.size : b.size,
+                speed: a.kind == .plant ? 0 : (speedFromA ? a.speed : b.speed),
+                vision: a.kind == .plant ? 0 : (visionFromA ? a.vision : b.vision),
+                red: redFromA ? a.red : b.red,
+                green: greenFromA ? a.green : b.green,
+                blue: blueFromA ? a.blue : b.blue
+            ),
+            inherited
         )
     }
 
     private func performMutation() {
         mutatedGeneDescription = nil
+        mutationExamples = []
+
+        let sampleIndices = Set(offspring.indices.shuffled().prefix(min(4, offspring.count)))
 
         for index in offspring.indices {
-            guard Double.random(in: 0...1) < configuration.mutationRate else { continue }
+            let before = offspring[index]
+            var mutation: (gene: String, old: Double, new: Double)?
 
-            let gene = Int.random(in: 0...5)
-            let amount = Double.random(in: -0.10...0.10)
+            if Double.random(in: 0...1) < configuration.mutationRate {
+                mutation = mutateOffspring(at: index)
+            }
 
-            switch gene {
-            case 0:
-                let old = offspring[index].genome.size
-                offspring[index].genome.size = clamp(old + amount)
-                recordMutationIfNeeded(name: "size", old: old, new: offspring[index].genome.size)
-            case 1 where offspring[index].genome.kind != .plant:
-                let old = offspring[index].genome.speed
-                offspring[index].genome.speed = clamp(old + amount)
-                recordMutationIfNeeded(name: "speed", old: old, new: offspring[index].genome.speed)
-            case 2 where offspring[index].genome.kind != .plant:
-                let old = offspring[index].genome.vision
-                offspring[index].genome.vision = clamp(old + amount)
-                recordMutationIfNeeded(name: "vision", old: old, new: offspring[index].genome.vision)
-            case 3:
-                let old = offspring[index].genome.red
-                offspring[index].genome.red = clamp(old + amount)
-                recordMutationIfNeeded(name: "red", old: old, new: offspring[index].genome.red)
-            case 4:
-                let old = offspring[index].genome.green
-                offspring[index].genome.green = clamp(old + amount)
-                recordMutationIfNeeded(name: "green", old: old, new: offspring[index].genome.green)
-            default:
-                let old = offspring[index].genome.blue
-                offspring[index].genome.blue = clamp(old + amount)
-                recordMutationIfNeeded(name: "blue", old: old, new: offspring[index].genome.blue)
+            if sampleIndices.contains(index) {
+                mutationExamples.append(
+                    MutationExample(
+                        before: before,
+                        after: offspring[index],
+                        gene: mutation?.gene,
+                        oldValue: mutation?.old,
+                        newValue: mutation?.new
+                    )
+                )
+            }
+
+            if mutatedGeneDescription == nil, let mutation {
+                mutatedGeneDescription = "\(mutation.gene.capitalized): \(mutation.old.formatted(.number.precision(.fractionLength(2)))) → \(mutation.new.formatted(.number.precision(.fractionLength(2))))"
             }
         }
 
         if mutatedGeneDescription == nil {
-            mutatedGeneDescription = "No mutation happened in this sample. Mutation is probabilistic, so some generations contain none."
+            mutatedGeneDescription = "No mutation occurred in this generation. Mutation is probabilistic."
         }
     }
 
-    private func recordMutationIfNeeded(name: String, old: Double, new: Double) {
-        guard mutatedGeneDescription == nil else { return }
-        mutatedGeneDescription = "\(name.capitalized): \(old.formatted(.number.precision(.fractionLength(2)))) → \(new.formatted(.number.precision(.fractionLength(2))))"
+    private func mutateOffspring(at index: Int) -> (gene: String, old: Double, new: Double) {
+        let kind = offspring[index].genome.kind
+        let eligibleGenes = kind == .plant ? [0, 3, 4, 5] : [0, 1, 2, 3, 4, 5]
+        let gene = eligibleGenes.randomElement() ?? 0
+        let amount = Double.random(in: -0.10...0.10)
+
+        switch gene {
+        case 0:
+            let old = offspring[index].genome.size
+            offspring[index].genome.size = clamp(old + amount)
+            return ("size", old, offspring[index].genome.size)
+        case 1:
+            let old = offspring[index].genome.speed
+            offspring[index].genome.speed = clamp(old + amount)
+            return ("speed", old, offspring[index].genome.speed)
+        case 2:
+            let old = offspring[index].genome.vision
+            offspring[index].genome.vision = clamp(old + amount)
+            return ("vision", old, offspring[index].genome.vision)
+        case 3:
+            let old = offspring[index].genome.red
+            offspring[index].genome.red = clamp(old + amount)
+            return ("red", old, offspring[index].genome.red)
+        case 4:
+            let old = offspring[index].genome.green
+            offspring[index].genome.green = clamp(old + amount)
+            return ("green", old, offspring[index].genome.green)
+        default:
+            let old = offspring[index].genome.blue
+            offspring[index].genome.blue = clamp(old + amount)
+            return ("blue", old, offspring[index].genome.blue)
+        }
     }
 
     private func installNewGeneration() {
