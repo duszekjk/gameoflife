@@ -137,40 +137,157 @@ final class SimulationEngine: ObservableObject {
 
         switch caseStudy.kind {
         case .plant:
-            guard append("Enough stored energy?", value: organism.energy, threshold: rules.energyThreshold, yes: "YES → check greenness", no: "NO → Die") else { return path }
-            guard append("Green enough for efficient photosynthesis?", value: organism.genome.green, threshold: rules.greenThreshold, yes: "YES → check size", no: "NO → check body size") else {
-                _ = append("Large enough to compensate?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
-                return path
-            }
-            _ = append("Large enough energy reserve?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
+            guard append(
+                "Energy at least medium?",
+                value: organism.energy,
+                threshold: rules.energyLowThreshold,
+                yes: "YES → check if energy is high",
+                no: "NO → Die"
+            ) else { return path }
 
-        case .herbivore:
-            guard append("Enough stored energy?", value: organism.energy, threshold: rules.energyThreshold, yes: "YES → check speed", no: "NO → Die") else { return path }
-            if append("Fast enough to reach food / escape?", value: organism.genome.speed, threshold: rules.speedThreshold, yes: "YES → check vision", no: "NO → check visibility") {
-                if append("Vision good enough to detect food and threats?", value: organism.genome.vision, threshold: rules.visionThreshold, yes: "YES → check size", no: "NO → check visibility") {
-                    _ = append("Large enough to survive encounters?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → check visibility")
-                    if path.last?.passed == false {
-                        _ = append("Hard enough to spot?", value: 1.0 - organism.genome.visibility, threshold: 1.0 - rules.visibilityThreshold, yes: "YES → Survive", no: "NO → Die")
-                    }
+            if append(
+                "Energy high?",
+                value: organism.energy,
+                threshold: rules.energyHighThreshold,
+                yes: "YES → check greenness",
+                no: "NO → check greenness"
+            ) {
+                if append(
+                    "Very green?",
+                    value: organism.genome.green,
+                    threshold: rules.plantGreenHighThreshold,
+                    yes: "YES → check smaller size threshold",
+                    no: "NO → check larger size threshold"
+                ) {
+                    _ = append(
+                        "Large enough on high-energy green branch?",
+                        value: organism.genome.size,
+                        threshold: rules.plantSizeIfGreenThreshold,
+                        yes: "YES → Survive",
+                        no: "NO → Die"
+                    )
                 } else {
-                    _ = append("Hard enough to spot?", value: 1.0 - organism.genome.visibility, threshold: 1.0 - rules.visibilityThreshold, yes: "YES → Survive", no: "NO → Die")
+                    _ = append(
+                        "Large enough to compensate for weak greenness?",
+                        value: organism.genome.size,
+                        threshold: rules.plantSizeIfNotGreenThreshold,
+                        yes: "YES → Survive",
+                        no: "NO → Die"
+                    )
                 }
             } else {
-                _ = append("Hard enough to spot?", value: 1.0 - organism.genome.visibility, threshold: 1.0 - rules.visibilityThreshold, yes: "YES → Survive", no: "NO → Die")
+                if append(
+                    "Green enough with only medium energy?",
+                    value: organism.genome.green,
+                    threshold: rules.plantGreenHighThreshold,
+                    yes: "YES → check larger size threshold",
+                    no: "NO → Die"
+                ) {
+                    _ = append(
+                        "Large enough on medium-energy branch?",
+                        value: organism.genome.size,
+                        threshold: rules.plantSizeIfNotGreenThreshold,
+                        yes: "YES → Survive",
+                        no: "NO → Die"
+                    )
+                }
+            }
+
+        case .herbivore:
+            guard append(
+                "Energy at least medium?",
+                value: organism.energy,
+                threshold: rules.energyLowThreshold,
+                yes: "YES → check if energy is high",
+                no: "NO → Die"
+            ) else { return path }
+
+            if append(
+                "Energy high?",
+                value: organism.energy,
+                threshold: rules.energyHighThreshold,
+                yes: "YES → use high-energy speed split",
+                no: "NO → use medium-energy speed split"
+            ) {
+                if append(
+                    "Fast enough for high-energy branch?",
+                    value: organism.genome.speed,
+                    threshold: rules.herbivoreSpeedHighEnergyThreshold,
+                    yes: "YES → check vision",
+                    no: "NO → Die"
+                ) {
+                    _ = append(
+                        "Vision good enough after fast branch?",
+                        value: organism.genome.vision,
+                        threshold: rules.herbivoreVisionFastThreshold,
+                        yes: "YES → Survive",
+                        no: "NO → Die"
+                    )
+                }
+            } else {
+                if append(
+                    "Fast enough for medium-energy branch?",
+                    value: organism.genome.speed,
+                    threshold: rules.herbivoreSpeedMediumEnergyThreshold,
+                    yes: "YES → check camouflage",
+                    no: "NO → Die"
+                ) {
+                    _ = append(
+                        "Hard enough to spot?",
+                        value: 1.0 - organism.genome.visibility,
+                        threshold: 1.0 - rules.herbivoreCamouflageSlowThreshold,
+                        yes: "YES → Survive",
+                        no: "NO → Die"
+                    )
+                }
             }
 
         case .predator:
-            guard append("Enough stored energy?", value: organism.energy, threshold: rules.energyThreshold, yes: "YES → check vision", no: "NO → Die") else { return path }
-            if append("Vision good enough to find prey?", value: organism.genome.vision, threshold: rules.visionThreshold, yes: "YES → check speed", no: "NO → check size") {
-                if append("Fast enough to catch prey?", value: organism.genome.speed, threshold: rules.speedThreshold, yes: "YES → check size", no: "NO → check size") {
-                    _ = append("Large enough to overpower prey?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
-                } else {
-                    _ = append("Large enough to compensate for low speed?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → Survive", no: "NO → Die")
+            guard append(
+                "Energy at least medium?",
+                value: organism.energy,
+                threshold: rules.energyLowThreshold,
+                yes: "YES → check if energy is high",
+                no: "NO → Die"
+            ) else { return path }
+
+            if append(
+                "Energy high?",
+                value: organism.energy,
+                threshold: rules.energyHighThreshold,
+                yes: "YES → use high-energy vision split",
+                no: "NO → use medium-energy vision split"
+            ) {
+                if append(
+                    "Vision good enough on high-energy branch?",
+                    value: organism.genome.vision,
+                    threshold: rules.predatorVisionHighEnergyThreshold,
+                    yes: "YES → check speed",
+                    no: "NO → Die"
+                ) {
+                    _ = append(
+                        "Fast enough after good vision?",
+                        value: organism.genome.speed,
+                        threshold: rules.predatorSpeedGoodVisionThreshold,
+                        yes: "YES → Survive",
+                        no: "NO → Die"
+                    )
                 }
             } else {
-                _ = append("Large enough to survive with poor hunting?", value: organism.genome.size, threshold: rules.sizeThreshold, yes: "YES → check speed", no: "NO → Die")
-                if path.last?.passed == true {
-                    _ = append("Fast enough despite poor vision?", value: organism.genome.speed, threshold: rules.speedThreshold, yes: "YES → Survive", no: "NO → Die")
+                if append(
+                    "Vision good enough on medium-energy branch?",
+                    value: organism.genome.vision,
+                    threshold: rules.predatorVisionMediumEnergyThreshold,
+                    yes: "YES → check size",
+                    no: "NO → Die"
+                ) {
+                    _ = append(
+                        "Large enough to compensate for medium energy?",
+                        value: organism.genome.size,
+                        threshold: rules.predatorSizePoorVisionThreshold,
+                        yes: "YES → Survive",
+                        no: "NO → Die"
+                    )
                 }
             }
         }
@@ -659,30 +776,51 @@ final class SimulationEngine: ObservableObject {
         switch organism.genome.kind {
         case .plant:
             return DecisionTreeRules(
-                energyThreshold: 70,
-                sizeThreshold: 0.45,
-                speedThreshold: 0.50,
-                visionThreshold: 0.50,
-                greenThreshold: 0.55,
-                visibilityThreshold: 0.55
+                energyLowThreshold: 55,
+                energyHighThreshold: 90,
+                plantGreenHighThreshold: 0.60,
+                plantSizeIfGreenThreshold: 0.40,
+                plantSizeIfNotGreenThreshold: 0.70,
+                herbivoreSpeedHighEnergyThreshold: 0.62,
+                herbivoreSpeedMediumEnergyThreshold: 0.42,
+                herbivoreVisionFastThreshold: 0.48,
+                herbivoreCamouflageSlowThreshold: 0.45,
+                predatorVisionHighEnergyThreshold: 0.60,
+                predatorVisionMediumEnergyThreshold: 0.40,
+                predatorSpeedGoodVisionThreshold: 0.58,
+                predatorSizePoorVisionThreshold: 0.68
             )
         case .herbivore:
             return DecisionTreeRules(
-                energyThreshold: 65,
-                sizeThreshold: 0.40,
-                speedThreshold: 0.50,
-                visionThreshold: 0.45,
-                greenThreshold: 0.55,
-                visibilityThreshold: 0.55
+                energyLowThreshold: 55,
+                energyHighThreshold: 90,
+                plantGreenHighThreshold: 0.60,
+                plantSizeIfGreenThreshold: 0.40,
+                plantSizeIfNotGreenThreshold: 0.70,
+                herbivoreSpeedHighEnergyThreshold: 0.62,
+                herbivoreSpeedMediumEnergyThreshold: 0.42,
+                herbivoreVisionFastThreshold: 0.48,
+                herbivoreCamouflageSlowThreshold: 0.45,
+                predatorVisionHighEnergyThreshold: 0.60,
+                predatorVisionMediumEnergyThreshold: 0.40,
+                predatorSpeedGoodVisionThreshold: 0.58,
+                predatorSizePoorVisionThreshold: 0.68
             )
         case .predator:
             return DecisionTreeRules(
-                energyThreshold: 75,
-                sizeThreshold: 0.55,
-                speedThreshold: 0.50,
-                visionThreshold: 0.55,
-                greenThreshold: 0.55,
-                visibilityThreshold: 0.55
+                energyLowThreshold: 55,
+                energyHighThreshold: 90,
+                plantGreenHighThreshold: 0.60,
+                plantSizeIfGreenThreshold: 0.40,
+                plantSizeIfNotGreenThreshold: 0.70,
+                herbivoreSpeedHighEnergyThreshold: 0.62,
+                herbivoreSpeedMediumEnergyThreshold: 0.42,
+                herbivoreVisionFastThreshold: 0.48,
+                herbivoreCamouflageSlowThreshold: 0.45,
+                predatorVisionHighEnergyThreshold: 0.60,
+                predatorVisionMediumEnergyThreshold: 0.40,
+                predatorSpeedGoodVisionThreshold: 0.58,
+                predatorSizePoorVisionThreshold: 0.68
             )
         }
     }
