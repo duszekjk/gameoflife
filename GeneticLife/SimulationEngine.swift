@@ -110,9 +110,12 @@ final class SimulationEngine: ObservableObject {
     }
 
     func geneComparisons() -> [GeneComparison] {
-        guard selectedParents.count >= 2, let child = offspring.first else { return [] }
-        let a = selectedParents[0].genome
-        let b = selectedParents[1].genome
+        guard let child = offspring.first else { return [] }
+        let sameTypeParents = selectedParents.filter { $0.genome.kind == child.genome.kind }
+        guard sameTypeParents.count >= 2 else { return [] }
+
+        let a = sameTypeParents[0].genome
+        let b = sameTypeParents[1].genome
         let c = child.genome
 
         return [
@@ -383,7 +386,7 @@ final class SimulationEngine: ObservableObject {
         return (0..<count).map { _ in
             let genome: Genome
             if let a = parents.randomElement(), let b = parents.randomElement() {
-                genome = crossover(a.genome, b.genome)
+                genome = crossoverSameType(a.genome, b.genome)
             } else {
                 genome = .random(kind: kind)
             }
@@ -396,7 +399,9 @@ final class SimulationEngine: ObservableObject {
         }
     }
 
-    private func crossover(_ a: Genome, _ b: Genome) -> Genome {
+    private func crossoverSameType(_ a: Genome, _ b: Genome) -> Genome {
+        precondition(a.kind == b.kind, "Crossover is only valid between organisms of the same type.")
+
         Genome(
             kind: a.kind,
             size: Bool.random() ? a.size : b.size,
