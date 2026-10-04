@@ -11,6 +11,7 @@ final class SimulationEngine: ObservableObject {
     @Published private(set) var isRunningEnvironment = false
     @Published var automaticMode = false
     @Published private(set) var selectedParents: [Organism] = []
+    @Published private(set) var selectionExamples: [Organism] = []
     @Published private(set) var offspring: [Organism] = []
     @Published private(set) var crossoverExamples: [CrossoverExample] = []
     @Published private(set) var mutationExamples: [MutationExample] = []
@@ -39,6 +40,7 @@ final class SimulationEngine: ObservableObject {
         step = .initialPopulation
         elapsedTime = 0
         selectedParents = []
+        selectionExamples = []
         offspring = []
         crossoverExamples = []
         mutationExamples = []
@@ -82,6 +84,7 @@ final class SimulationEngine: ObservableObject {
         case .newGeneration:
             step = .initialPopulation
             selectedParents = []
+            selectionExamples = []
             offspring = []
             crossoverExamples = []
             mutationExamples = []
@@ -374,6 +377,8 @@ final class SimulationEngine: ObservableObject {
             }
         }
 
+        selectionExamples = Array(selectedParents.shuffled().prefix(min(4, selectedParents.count)))
+
         if selectedParents.isEmpty {
             statusMessage = "No organisms survived. The next generation will be reseeded randomly so the lesson can continue."
         }
@@ -385,6 +390,7 @@ final class SimulationEngine: ObservableObject {
         offspring += makeOffspring(kind: .plant, count: configuration.plantCount)
         offspring += makeOffspring(kind: .herbivore, count: configuration.herbivoreCount)
         offspring += makeOffspring(kind: .predator, count: configuration.predatorCount)
+        crossoverExamples = Array(crossoverExamples.shuffled().prefix(min(4, crossoverExamples.count)))
     }
 
     private func makeOffspring(kind: OrganismKind, count: Int) -> [Organism] {
@@ -414,7 +420,7 @@ final class SimulationEngine: ObservableObject {
             )
             created.append(child)
 
-            if crossoverExamples.count < 4, let parentA, let parentB {
+            if let parentA, let parentB {
                 crossoverExamples.append(
                     CrossoverExample(
                         parentA: parentA,
