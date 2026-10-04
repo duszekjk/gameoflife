@@ -2,34 +2,120 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var engine = SimulationEngine()
-    @State private var showSettings = true
     @State private var showVision = true
 
     var body: some View {
-        NavigationStack {
+        NavigationSplitView {
+            settingsSidebar
+                .navigationTitle("Settings")
+                .navigationSplitViewColumnWidth(min: 260, ideal: 300)
+        } detail: {
             ScrollView {
                 VStack(spacing: 18) {
                     teachingHeader
-
-                    if showSettings {
-                        settingsPanel
-                    }
-
                     simulationPanel
                     stepVisualization
                     controls
                     statisticsPanel
                 }
                 .padding()
-                .frame(maxWidth: 1050)
+                .frame(maxWidth: 1100)
                 .frame(maxWidth: .infinity)
             }
             .navigationTitle("Genetic Life")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(showSettings ? "Hide settings" : "Settings") {
-                        withAnimation { showSettings.toggle() }
-                    }
+        }
+    }
+
+    private var settingsSidebar: some View {
+        Form {
+            Section("Population") {
+                integerSlider(
+                    title: "Plants",
+                    value: binding(
+                        get: { engine.configuration.plantCount },
+                        set: { engine.configuration.plantCount = $0 }
+                    ),
+                    range: 5...60
+                )
+
+                integerSlider(
+                    title: "Herbivores",
+                    value: binding(
+                        get: { engine.configuration.herbivoreCount },
+                        set: { engine.configuration.herbivoreCount = $0 }
+                    ),
+                    range: 5...50
+                )
+
+                integerSlider(
+                    title: "Predators",
+                    value: binding(
+                        get: { engine.configuration.predatorCount },
+                        set: { engine.configuration.predatorCount = $0 }
+                    ),
+                    range: 1...25
+                )
+            }
+
+            Section("Genetic algorithm") {
+                doubleSlider(
+                    title: "Mutation probability",
+                    value: Binding(
+                        get: { engine.configuration.mutationRate },
+                        set: { engine.configuration.mutationRate = $0 }
+                    ),
+                    range: 0.01...0.25,
+                    valueText: engine.configuration.mutationRate.formatted(.percent.precision(.fractionLength(0)))
+                )
+            }
+
+            Section("Environment") {
+                doubleSlider(
+                    title: "Simulation duration",
+                    value: Binding(
+                        get: { engine.configuration.simulationDuration },
+                        set: { engine.configuration.simulationDuration = $0 }
+                    ),
+                    range: 3...15,
+                    valueText: "\(engine.configuration.simulationDuration.formatted(.number.precision(.fractionLength(0)))) s"
+                )
+
+                integerSlider(
+                    title: "Early stop animals",
+                    value: binding(
+                        get: { engine.configuration.minimumAnimalSurvivors },
+                        set: { engine.configuration.minimumAnimalSurvivors = $0 }
+                    ),
+                    range: 1...max(2, engine.configuration.animalCount - 1)
+                )
+
+                Toggle("Show vision circles", isOn: $showVision)
+            }
+
+            Section {
+                Button("Apply & restart") {
+                    engine.applyConfigurationAndReset()
+                }
+                .frame(maxWidth: .infinity)
+            }
+
+            Section("Symbols") {
+                Label {
+                    Text("Plant")
+                } icon: {
+                    Text("✿")
+                }
+
+                Label {
+                    Text("Herbivore")
+                } icon: {
+                    Text("◆")
+                }
+
+                Label {
+                    Text("Predator")
+                } icon: {
+                    Text("▲")
                 }
             }
         }
@@ -55,7 +141,6 @@ struct ContentView: View {
                 .font(.title2.bold())
 
             Text(engine.step.explanation)
-                .font(.body)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -67,95 +152,17 @@ struct ContentView: View {
                     .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
             }
         }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private var settingsPanel: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Experiment settings")
-                .font(.headline)
-
-            integerSlider(
-                title: "Plants",
-                value: binding(
-                    get: { engine.configuration.plantCount },
-                    set: { engine.configuration.plantCount = $0 }
-                ),
-                range: 5...60
-            )
-
-            integerSlider(
-                title: "Herbivores",
-                value: binding(
-                    get: { engine.configuration.herbivoreCount },
-                    set: { engine.configuration.herbivoreCount = $0 }
-                ),
-                range: 5...50
-            )
-
-            integerSlider(
-                title: "Predators",
-                value: binding(
-                    get: { engine.configuration.predatorCount },
-                    set: { engine.configuration.predatorCount = $0 }
-                ),
-                range: 1...25
-            )
-
-            doubleSlider(
-                title: "Environment duration",
-                value: Binding(
-                    get: { engine.configuration.simulationDuration },
-                    set: { engine.configuration.simulationDuration = $0 }
-                ),
-                range: 3...15,
-                valueText: "\(engine.configuration.simulationDuration.formatted(.number.precision(.fractionLength(0)))) s"
-            )
-
-            doubleSlider(
-                title: "Mutation probability",
-                value: Binding(
-                    get: { engine.configuration.mutationRate },
-                    set: { engine.configuration.mutationRate = $0 }
-                ),
-                range: 0.01...0.25,
-                valueText: engine.configuration.mutationRate.formatted(.percent.precision(.fractionLength(0)))
-            )
-
-            integerSlider(
-                title: "Stop when animals fall to",
-                value: binding(
-                    get: { engine.configuration.minimumAnimalSurvivors },
-                    set: { engine.configuration.minimumAnimalSurvivors = $0 }
-                ),
-                range: 1...max(2, engine.configuration.animalCount - 1)
-            )
-
-            HStack {
-                Toggle("Show vision", isOn: $showVision)
-                Spacer()
-                Button("Apply & restart") {
-                    engine.applyConfigurationAndReset()
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .panelStyle()
     }
 
     private var simulationPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Label("Plant", systemImage: "leaf.fill")
-                Text("✿")
+            HStack(spacing: 10) {
+                Text("✿ Plant")
                 Divider().frame(height: 18)
-                Text("◆")
-                Text("Herbivore")
+                Text("◆ Herbivore")
                 Divider().frame(height: 18)
-                Text("▲")
-                Text("Predator")
+                Text("▲ Predator")
                 Spacer()
 
                 if engine.step == .environment {
@@ -235,13 +242,13 @@ struct ContentView: View {
         case .initialPopulation:
             conceptCard(
                 title: "What is inherited?",
-                body: "Circle size represents the size gene. Fill colour comes directly from RGB genes. Moving animals also inherit speed and vision. The symbol inside each circle identifies its ecological role, so colour stays free to evolve."
+                body: "Circle size is the size gene, fill colour is the RGB genome, and the symbol identifies the fixed ecological role. Animals also inherit speed and vision. Plants have speed and vision fixed at zero."
             )
 
         case .environment:
             conceptCard(
                 title: "Genes meet the environment",
-                body: "Vision circles show detection range. Visible prey flee predators; predators steer toward prey; herbivores seek plants. Larger vision, faster motion and larger bodies all cost energy. Greener plants generate more energy."
+                body: "Vision circles show detection range. Herbivores flee visible predators and seek plants. Predators chase visible prey. Movement, body size and vision cost energy, while greener plants generate energy more efficiently."
             )
 
         case .fitness:
@@ -257,10 +264,7 @@ struct ContentView: View {
             mutationExplanation
 
         case .newGeneration:
-            conceptCard(
-                title: "Inheritance completed",
-                body: "Generation \(engine.generation) now contains the offspring. Their genomes came from selected parents, with occasional mutations. Press Next to inspect this population before running its environment."
-            )
+            newGenerationExplanation
         }
     }
 
@@ -268,102 +272,308 @@ struct ContentView: View {
         let ranked = engine.organisms
             .filter { $0.isAlive }
             .sorted { $0.fitness > $1.fitness }
-            .prefix(5)
+        let examples = Array(ranked.prefix(4))
 
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 14) {
             Text("Fitness converts survival into a number")
                 .font(.headline)
-            Text("The labels in the arena are fitness scores. Remaining energy, food eaten and a survival bonus contribute to fitness. Dead organisms have fitness 0 and cannot become parents.")
+
+            Text("The whole population is scored first. Below are four concrete survivors so you can connect their visible phenotype with the fitness value used by selection.")
                 .foregroundStyle(.secondary)
 
-            ForEach(Array(ranked)) { organism in
-                HStack {
-                    Text(organism.genome.kind.symbol)
-                    Text(organism.genome.kind.title)
-                    Spacer()
-                    Text("energy \(organism.energy.formatted(.number.precision(.fractionLength(0))))")
-                        .foregroundStyle(.secondary)
-                    Text("fitness \(organism.fitness.formatted(.number.precision(.fractionLength(0))))")
-                        .monospacedDigit()
-                        .bold()
+            aggregateFitnessTable(ranked: Array(ranked.prefix(8)))
+
+            exampleGrid {
+                ForEach(examples) { organism in
+                    specimenCard(
+                        organism,
+                        title: organism.genome.kind.title,
+                        footer: "Energy \(organism.energy.formatted(.number.precision(.fractionLength(0)))) · Food \(organism.foodEaten) · Fitness \(organism.fitness.formatted(.number.precision(.fractionLength(0))))"
+                    )
                 }
-                .font(.callout)
             }
         }
         .panelStyle()
     }
 
     private var selectionExplanation: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Selection is weighted, not deterministic")
+        let examples = Array(engine.selectedParents.prefix(4))
+
+        return VStack(alignment: .leading, spacing: 14) {
+            Text("Selection chooses parents probabilistically")
                 .font(.headline)
-            Text("Outlined organisms were sampled as parents. Fitness controls probability: a high-fitness organism can be selected several times, while another survivor may not be selected at all.")
+
+            Text("Selection happens independently inside each type. Plants compete with plants, herbivores with herbivores, and predators with predators. Higher fitness increases the probability of being sampled.")
                 .foregroundStyle(.secondary)
 
             HStack {
-                Text("Parent samples")
+                Text("Total parent samples")
                 Spacer()
                 Text("\(engine.selectedParents.count)")
                     .monospacedDigit()
                     .bold()
             }
-            .font(.callout)
+
+            exampleGrid {
+                ForEach(examples) { organism in
+                    specimenCard(
+                        organism,
+                        title: "Selected \(organism.genome.kind.title)",
+                        footer: "Fitness \(organism.fitness.formatted(.number.precision(.fractionLength(0)))) · selection chance ≈ \(selectionChance(for: organism).formatted(.percent.precision(.fractionLength(1))))"
+                    )
+                }
+            }
         }
         .panelStyle()
     }
 
     private var crossoverExplanation: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Crossover mixes parental genes")
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Crossover mixes DNA from two same-type parents")
                 .font(.headline)
 
-            if engine.geneComparisons().isEmpty {
-                Text("A species without surviving parents is reseeded randomly so the educational simulation can continue.")
+            Text("These are actual parent pairings used to create offspring in this generation. Each row shows the two parents, the child that was produced, and which genes came from Parent A. All remaining genes came from Parent B.")
+                .foregroundStyle(.secondary)
+
+            if engine.crossoverExamples.isEmpty {
+                Text("No valid same-type parent pair was available for an example.")
                     .foregroundStyle(.secondary)
             } else {
-                Text("This table shows one example child. Each trait is independently copied from one of its two parents.")
-                    .foregroundStyle(.secondary)
-
-                Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 7) {
-                    GridRow {
-                        Text("Gene").bold()
-                        Text("Parent A").bold()
-                        Text("Child").bold()
-                        Text("Parent B").bold()
-                    }
-
-                    ForEach(engine.geneComparisons()) { row in
-                        GridRow {
-                            Text(row.name)
-                            Text(row.parentA.formatted(.number.precision(.fractionLength(2))))
-                                .foregroundStyle(row.inheritedFromA ? .primary : .secondary)
-                            Text(row.child.formatted(.number.precision(.fractionLength(2))))
-                                .bold()
-                            Text(row.parentB.formatted(.number.precision(.fractionLength(2))))
-                                .foregroundStyle(row.inheritedFromA ? .secondary : .primary)
-                        }
-                        .monospacedDigit()
-                    }
+                ForEach(Array(engine.crossoverExamples.prefix(4))) { example in
+                    crossoverCard(example)
                 }
-                .font(.callout)
             }
         }
         .panelStyle()
     }
 
     private var mutationExplanation: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Mutation introduces new variation")
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Mutation changes offspring after crossover")
                 .font(.headline)
-            Text("Each child has a \(engine.configuration.mutationRate.formatted(.percent.precision(.fractionLength(0)))) chance of one small gene mutation. Selection does not choose mutations; it can only favour or reject their consequences later.")
+
+            Text("Four offspring are sampled from the real population. Each has the configured mutation probability. Some examples may show no mutation at all—that is part of the algorithm.")
                 .foregroundStyle(.secondary)
 
-            if let mutation = engine.mutatedGeneDescription {
-                Text(mutation)
-                    .font(.title3.monospacedDigit().bold())
+            ForEach(Array(engine.mutationExamples.prefix(4))) { example in
+                mutationCard(example)
             }
         }
         .panelStyle()
+    }
+
+    private var newGenerationExplanation: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("The offspring become Generation \(engine.generation)")
+                .font(.headline)
+
+            Text("The full offspring population now replaces the previous generation. Here are four examples of organisms that actually entered the new population.")
+                .foregroundStyle(.secondary)
+
+            exampleGrid {
+                ForEach(Array(engine.organisms.prefix(4))) { organism in
+                    specimenCard(
+                        organism,
+                        title: organism.genome.kind.title,
+                        footer: genomeSummary(organism.genome)
+                    )
+                }
+            }
+        }
+        .panelStyle()
+    }
+
+    private func aggregateFitnessTable(ranked: [Organism]) -> some View {
+        Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 6) {
+            GridRow {
+                Text("Type").bold()
+                Text("Energy").bold()
+                Text("Food").bold()
+                Text("Fitness").bold()
+            }
+
+            ForEach(ranked) { organism in
+                GridRow {
+                    Text("\(organism.genome.kind.symbol) \(organism.genome.kind.title)")
+                    Text(organism.energy.formatted(.number.precision(.fractionLength(0))))
+                    Text("\(organism.foodEaten)")
+                    Text(organism.fitness.formatted(.number.precision(.fractionLength(0))))
+                        .bold()
+                }
+                .monospacedDigit()
+            }
+        }
+        .font(.caption)
+        .padding(12)
+        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func crossoverCard(_ example: CrossoverExample) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .center, spacing: 18) {
+                specimenVisual(example.parentA, label: "Parent A")
+                Image(systemName: "plus")
+                    .foregroundStyle(.secondary)
+                specimenVisual(example.parentB, label: "Parent B")
+                Image(systemName: "arrow.right")
+                    .foregroundStyle(.secondary)
+                specimenVisual(example.child, label: "Offspring")
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider()
+
+            Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 5) {
+                GridRow {
+                    Text("Gene").bold()
+                    Text("A").bold()
+                    Text("Child").bold()
+                    Text("B").bold()
+                    Text("From").bold()
+                }
+
+                geneRow("Size", key: "size", a: example.parentA.genome.size, child: example.child.genome.size, b: example.parentB.genome.size, inherited: example.inheritedFromA)
+                if example.child.genome.kind != .plant {
+                    geneRow("Speed", key: "speed", a: example.parentA.genome.speed, child: example.child.genome.speed, b: example.parentB.genome.speed, inherited: example.inheritedFromA)
+                    geneRow("Vision", key: "vision", a: example.parentA.genome.vision, child: example.child.genome.vision, b: example.parentB.genome.vision, inherited: example.inheritedFromA)
+                }
+                geneRow("Red", key: "red", a: example.parentA.genome.red, child: example.child.genome.red, b: example.parentB.genome.red, inherited: example.inheritedFromA)
+                geneRow("Green", key: "green", a: example.parentA.genome.green, child: example.child.genome.green, b: example.parentB.genome.green, inherited: example.inheritedFromA)
+                geneRow("Blue", key: "blue", a: example.parentA.genome.blue, child: example.child.genome.blue, b: example.parentB.genome.blue, inherited: example.inheritedFromA)
+            }
+            .font(.caption.monospacedDigit())
+        }
+        .padding(12)
+        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func geneRow(
+        _ name: String,
+        key: String,
+        a: Double,
+        child: Double,
+        b: Double,
+        inherited: [String]
+    ) -> some View {
+        let fromA = inherited.contains(key)
+
+        return GridRow {
+            Text(name)
+            Text(a.formatted(.number.precision(.fractionLength(2))))
+                .foregroundStyle(fromA ? .primary : .secondary)
+            Text(child.formatted(.number.precision(.fractionLength(2))))
+                .bold()
+            Text(b.formatted(.number.precision(.fractionLength(2))))
+                .foregroundStyle(fromA ? .secondary : .primary)
+            Text(fromA ? "A" : "B")
+                .bold()
+        }
+    }
+
+    private func mutationCard(_ example: MutationExample) -> some View {
+        HStack(spacing: 18) {
+            specimenVisual(example.before, label: "Before")
+
+            Image(systemName: "arrow.right")
+                .foregroundStyle(.secondary)
+
+            specimenVisual(example.after, label: "After")
+
+            Divider()
+                .frame(height: 64)
+
+            VStack(alignment: .leading, spacing: 5) {
+                if let gene = example.gene,
+                   let old = example.oldValue,
+                   let new = example.newValue {
+                    Text("\(gene.capitalized) mutated")
+                        .font(.headline)
+                    Text("\(old.formatted(.number.precision(.fractionLength(2)))) → \(new.formatted(.number.precision(.fractionLength(2))))")
+                        .font(.title3.monospacedDigit().bold())
+                } else {
+                    Text("No mutation")
+                        .font(.headline)
+                    Text("This offspring passed through mutation unchanged.")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func specimenCard(_ organism: Organism, title: String, footer: String) -> some View {
+        VStack(spacing: 8) {
+            specimenVisual(organism, label: title)
+            Text(footer)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity)
+        .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func specimenVisual(_ organism: Organism, label: String) -> some View {
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .fill(organism.genome.color)
+                    .frame(
+                        width: 34 + organism.genome.size * 30,
+                        height: 34 + organism.genome.size * 30
+                    )
+
+                Text(organism.genome.kind.symbol)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.white)
+                    .shadow(radius: 1)
+            }
+            .frame(width: 70, height: 70)
+
+            Text(label)
+                .font(.caption.bold())
+
+            Text(genomeSummary(organism.genome))
+                .font(.caption2.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private func genomeSummary(_ genome: Genome) -> String {
+        var parts = [
+            "size \(genome.size.formatted(.number.precision(.fractionLength(2))))",
+            "RGB \(genome.red.formatted(.number.precision(.fractionLength(2))))/\(genome.green.formatted(.number.precision(.fractionLength(2))))/\(genome.blue.formatted(.number.precision(.fractionLength(2))))"
+        ]
+
+        if genome.kind != .plant {
+            parts.append("speed \(genome.speed.formatted(.number.precision(.fractionLength(2))))")
+            parts.append("vision \(genome.vision.formatted(.number.precision(.fractionLength(2))))")
+        }
+
+        return parts.joined(separator: " · ")
+    }
+
+    private func selectionChance(for organism: Organism) -> Double {
+        let sameType = engine.organisms.filter {
+            $0.isAlive && $0.genome.kind == organism.genome.kind
+        }
+        let total = sameType.reduce(0) { $0 + max(0.001, $1.fitness) }
+        guard total > 0 else { return 0 }
+        return max(0.001, organism.fitness) / total
+    }
+
+    private func exampleGrid<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 180), spacing: 12)],
+            spacing: 12
+        ) {
+            content()
+        }
     }
 
     private var controls: some View {
@@ -418,14 +628,13 @@ struct ContentView: View {
                     stat("Avg vision", value: stats.averageVision.formatted(.number.precision(.fractionLength(2))))
                 }
                 GridRow {
-                    stat("Plant green", value: stats.averageGreen.formatted(.number.precision(.fractionLength(2))))
+                    stat("Avg plant green", value: stats.averageGreen.formatted(.number.precision(.fractionLength(2))))
                     Color.clear
                     Color.clear
                 }
             }
         }
-        .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .panelStyle()
     }
 
     private func stat(_ title: String, value: String) -> some View {
@@ -454,7 +663,7 @@ struct ContentView: View {
         value: Binding<Int>,
         range: ClosedRange<Int>
     ) -> some View {
-        VStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text(title)
                 Spacer()
@@ -479,7 +688,7 @@ struct ContentView: View {
         range: ClosedRange<Double>,
         valueText: String
     ) -> some View {
-        VStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack {
                 Text(title)
                 Spacer()
