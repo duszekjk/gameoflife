@@ -155,6 +155,23 @@ struct GeneComparison: Identifiable {
     let inheritedFromA: Bool
 }
 
+struct CrossoverExample: Identifiable {
+    let id = UUID()
+    let parentA: Organism
+    let parentB: Organism
+    let child: Organism
+    let inheritedFromA: [String]
+}
+
+struct MutationExample: Identifiable {
+    let id = UUID()
+    let before: Organism
+    let after: Organism
+    let gene: String
+    let oldValue: Double
+    let newValue: Double
+}
+
 struct GenerationStatistics {
     var averageSize: Double = 0
     var averageSpeed: Double = 0
