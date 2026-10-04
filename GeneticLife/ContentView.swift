@@ -8,7 +8,8 @@ struct ContentView: View {
         NavigationSplitView {
             settingsSidebar
                 .navigationTitle("Settings")
-                .navigationSplitViewColumnWidth(min: 260, ideal: 300)
+                .navigationSplitViewColumnWidth(min: 300, ideal: 340)
+                .controlSize(.large)
         } detail: {
             ScrollView {
                 VStack(spacing: 18) {
@@ -23,6 +24,7 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
             .navigationTitle("Genetic Life")
+            .controlSize(.large)
         }
     }
 
@@ -99,6 +101,20 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity)
             }
 
+            Section("Decision trees") {
+                Toggle(
+                    "Enable decision-tree lesson",
+                    isOn: Binding(
+                        get: { engine.decisionTreeMode },
+                        set: { engine.setDecisionTreeMode($0) }
+                    )
+                )
+
+                Text("Off by default. Turn this on before running the environment to predict whether one plant, one herbivore, and one predator will survive.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+            }
+
             Section("Symbols") {
                 Label {
                     Text("Plant")
@@ -125,10 +141,10 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Generation \(engine.generation)")
-                    .font(.headline)
+                    .font(.title3.bold())
                 Spacer()
                 Text("Step \(engine.step.number) of \(EvolutionStep.allCases.count)")
-                    .font(.subheadline)
+                    .font(.body)
                     .foregroundStyle(.secondary)
             }
 
@@ -138,7 +154,7 @@ struct ContentView: View {
             )
 
             Text(engine.step.title)
-                .font(.title2.bold())
+                .font(.largeTitle.bold())
 
             Text(engine.step.explanation)
                 .foregroundStyle(.secondary)
@@ -171,7 +187,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .font(.caption)
+            .font(.body)
 
             GeometryReader { proxy in
                 ZStack {
@@ -240,19 +256,39 @@ struct ContentView: View {
     private var stepVisualization: some View {
         switch engine.step {
         case .initialPopulation:
-            conceptCard(
-                title: "What is inherited?",
-                body: "Circle size is the size gene, fill colour is the RGB genome, and the symbol identifies the fixed ecological role. Animals also inherit speed and vision. Plants have speed and vision fixed at zero."
-            )
+            VStack(spacing: 18) {
+                conceptCard(
+                    title: "What is inherited?",
+                    body: "Circle size is the size gene, fill colour is the RGB genome, and the symbol identifies the fixed ecological role. Animals also inherit speed and vision. Plants have speed and vision fixed at zero."
+                )
+
+                if engine.decisionTreeMode {
+                    decisionTreeEditor
+                }
+            }
 
         case .environment:
-            conceptCard(
-                title: "Genes meet the environment",
-                body: "Vision circles show detection range. Herbivores flee visible predators and seek plants. Predators chase visible prey. Movement, body size and vision cost energy, while greener plants generate energy more efficiently."
-            )
+            VStack(spacing: 18) {
+                conceptCard(
+                    title: "Genes meet the environment",
+                    body: "Vision circles show detection range. Herbivores flee visible predators and seek plants. Predators chase visible prey. Movement, body size and vision cost energy, while greener plants generate energy more efficiently."
+                )
+
+                if engine.decisionTreeMode {
+                    conceptCard(
+                        title: "Now we test the expert rules",
+                        body: "The decision trees are frozen. They do not control the animals. The simulation now runs independently, and afterward we compare each prediction with what actually happened."
+                    )
+                }
+            }
 
         case .fitness:
-            fitnessExplanation
+            VStack(spacing: 18) {
+                if engine.decisionTreeMode {
+                    decisionTreeResults
+                }
+                fitnessExplanation
+            }
 
         case .selection:
             selectionExplanation
@@ -383,6 +419,198 @@ struct ContentView: View {
         .panelStyle()
     }
 
+    private var decisionTreeEditor: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Decision trees — make a prediction before the simulation")
+                .font(.largeTitle.bold())
+
+            Text("Act as the domain expert. For each selected organism, inspect its visible traits and define thresholds that lead to your final prediction: survive or die. These rules are explanatory only; they will not influence the simulation.")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+
+            ForEach(engine.decisionTreeCases) { caseStudy in
+                decisionTreeCaseEditor(caseStudy)
+            }
+        }
+        .panelStyle()
+    }
+
+    private func decisionTreeCaseEditor(_ caseStudy: DecisionTreeCase) -> some View {
+        let organism = caseStudy.organism
+
+        return VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 20) {
+                specimenVisual(organism, label: caseStudy.title)
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Build the expert rule")
+                        .font(.title2.bold())
+
+                    Text(decisionTreeExplanation(for: caseStudy))
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+            }
+
+            Divider()
+
+            VStack(spacing: 16) {
+                largeThresholdSlider(
+                    title: "1. Energy must be at least",
+                    value: decisionBinding(caseStudy.id, keyPath: \.energyThreshold),
+                    range: 0...140,
+                    valueText: caseStudy.rules.energyThreshold.formatted(.number.precision(.fractionLength(0)))
+                )
+
+                largeThresholdSlider(
+                    title: "2. Size must be at least",
+                    value: decisionBinding(caseStudy.id, keyPath: \.sizeThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                if caseStudy.kind == .plant {
+                    largeThresholdSlider(
+                        title: "3. Green channel must be at least",
+                        value: decisionBinding(caseStudy.id, keyPath: \.traitThreshold),
+                        range: 0.05...1.0,
+                        valueText: caseStudy.rules.traitThreshold.formatted(.number.precision(.fractionLength(2)))
+                    )
+                } else {
+                    largeThresholdSlider(
+                        title: caseStudy.kind == .predator ? "3. Vision must be at least" : "3. Speed must be at least",
+                        value: decisionBinding(caseStudy.id, keyPath: \.traitThreshold),
+                        range: 0.05...1.0,
+                        valueText: caseStudy.rules.traitThreshold.formatted(.number.precision(.fractionLength(2)))
+                    )
+                }
+
+                HStack {
+                    Text("Final expert prediction")
+                        .font(.title2.bold())
+
+                    Spacer()
+
+                    Picker(
+                        "Prediction",
+                        selection: decisionOutcomeBinding(caseStudy.id)
+                    ) {
+                        ForEach(DecisionOutcome.allCases) { outcome in
+                            Text(outcome.rawValue).tag(outcome)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 360)
+                }
+            }
+        }
+        .padding(18)
+        .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var decisionTreeResults: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Decision-tree predictions vs reality")
+                .font(.largeTitle.bold())
+
+            Text("Now we evaluate the expert system. A decision tree can be clear and interpretable, but it is only as good as the rules and thresholds chosen by the expert.")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+
+            if engine.decisionTreeResults.isEmpty {
+                Text("No decision-tree results are available for this generation.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(engine.decisionTreeResults) { result in
+                    HStack(spacing: 22) {
+                        specimenVisual(result.caseStudy.organism, label: result.caseStudy.title)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Prediction: \(result.predicted.rawValue)")
+                                .font(.title2.bold())
+                            Text("Actual result: \(result.actual.rawValue)")
+                                .font(.title2.bold())
+
+                            Label(
+                                result.wasCorrect ? "The decision tree predicted correctly" : "The decision tree was wrong",
+                                systemImage: result.wasCorrect ? "checkmark.circle.fill" : "xmark.circle.fill"
+                            )
+                            .font(.title3.bold())
+                        }
+
+                        Spacer()
+                    }
+                    .padding(18)
+                    .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 16))
+                }
+            }
+        }
+        .panelStyle()
+    }
+
+    private func decisionTreeExplanation(for caseStudy: DecisionTreeCase) -> String {
+        switch caseStudy.kind {
+        case .plant:
+            return "For the plant, use energy, size and greenness. Greener plants produce energy more efficiently, so these are plausible expert questions."
+        case .herbivore:
+            return "For the herbivore, use energy, size and speed. Speed may help it reach plants or escape predators, but it also costs energy."
+        case .predator:
+            return "For the predator, use energy, size and vision. Larger predators can eat more prey, while better vision helps them find targets."
+        }
+    }
+
+    private func decisionBinding(
+        _ id: UUID,
+        keyPath: WritableKeyPath<DecisionTreeRules, Double>
+    ) -> Binding<Double> {
+        Binding(
+            get: {
+                engine.decisionTreeCases.first(where: { $0.id == id })?.rules[keyPath: keyPath] ?? 0
+            },
+            set: { newValue in
+                engine.updateDecisionTreeRules(for: id) { rules in
+                    rules[keyPath: keyPath] = newValue
+                }
+            }
+        )
+    }
+
+    private func decisionOutcomeBinding(_ id: UUID) -> Binding<DecisionOutcome> {
+        Binding(
+            get: {
+                engine.decisionTreeCases.first(where: { $0.id == id })?.rules.predictedOutcome ?? .survive
+            },
+            set: { newValue in
+                engine.updateDecisionTreeRules(for: id) { rules in
+                    rules.predictedOutcome = newValue
+                }
+            }
+        )
+    }
+
+    private func largeThresholdSlider(
+        title: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        valueText: String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(.title3.bold())
+                Spacer()
+                Text(valueText)
+                    .font(.title2.monospacedDigit().bold())
+            }
+
+            Slider(value: value, in: range)
+                .controlSize(.large)
+        }
+    }
+
     private func aggregateFitnessTable(ranked: [Organism]) -> some View {
         Grid(alignment: .leading, horizontalSpacing: 18, verticalSpacing: 6) {
             GridRow {
@@ -403,7 +631,7 @@ struct ContentView: View {
                 .monospacedDigit()
             }
         }
-        .font(.caption)
+        .font(.body)
         .padding(12)
         .background(Color.secondary.opacity(0.06), in: RoundedRectangle(cornerRadius: 12))
     }
@@ -508,7 +736,7 @@ struct ContentView: View {
         VStack(spacing: 8) {
             specimenVisual(organism, label: title)
             Text(footer)
-                .font(.caption)
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -523,22 +751,22 @@ struct ContentView: View {
                 Circle()
                     .fill(organism.genome.color)
                     .frame(
-                        width: 34 + organism.genome.size * 30,
-                        height: 34 + organism.genome.size * 30
+                        width: 52 + organism.genome.size * 44,
+                        height: 52 + organism.genome.size * 44
                     )
 
                 Text(organism.genome.kind.symbol)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 26, weight: .bold))
                     .foregroundStyle(.white)
                     .shadow(radius: 1)
             }
-            .frame(width: 70, height: 70)
+            .frame(width: 108, height: 108)
 
             Text(label)
                 .font(.caption.bold())
 
             Text(genomeSummary(organism.genome))
-                .font(.caption2.monospacedDigit())
+                .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -640,10 +868,10 @@ struct ContentView: View {
     private func stat(_ title: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.caption)
+                .font(.body)
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.headline.monospacedDigit())
+                .font(.title2.monospacedDigit().bold())
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
