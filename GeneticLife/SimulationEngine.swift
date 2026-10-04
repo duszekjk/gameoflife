@@ -417,7 +417,11 @@ final class SimulationEngine: ObservableObject {
             let count = kind == .plant ? max(5, configuration.plantCount) :
                 (kind == .herbivore ? max(5, configuration.herbivoreCount) : max(5, configuration.predatorCount))
 
-            for _ in 0..<count {
+            let guaranteedDistinct = Array(candidates.prefix(min(5, candidates.count)))
+            selectedParents.append(contentsOf: guaranteedDistinct)
+
+            let remainingSelections = max(0, count - guaranteedDistinct.count)
+            for _ in 0..<remainingSelections {
                 if let chosen = weightedChoice(from: candidates) {
                     selectedParents.append(chosen)
                 }
