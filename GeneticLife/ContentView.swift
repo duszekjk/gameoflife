@@ -533,97 +533,249 @@ struct ContentView: View {
 
     @ViewBuilder
     private func thresholdControls(for caseStudy: DecisionTreeCase) -> some View {
-        VStack(spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Node thresholds")
+                .font(.title2.bold())
+
+            Text("A feature may appear in several nodes with different thresholds. That is normal in a decision tree: earlier branches restrict which specimens reach each later split.")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+
             largeThresholdSlider(
-                title: "Energy threshold",
-                value: decisionBinding(caseStudy.id, keyPath: \.energyThreshold),
-                range: 0...140,
-                valueText: caseStudy.rules.energyThreshold.formatted(.number.precision(.fractionLength(0)))
+                title: "Root: minimum energy",
+                value: decisionBinding(caseStudy.id, keyPath: \.energyLowThreshold),
+                range: 0...120,
+                valueText: caseStudy.rules.energyLowThreshold.formatted(.number.precision(.fractionLength(0)))
             )
 
             largeThresholdSlider(
-                title: "Size threshold",
-                value: decisionBinding(caseStudy.id, keyPath: \.sizeThreshold),
-                range: 0.05...1.0,
-                valueText: caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2)))
+                title: "Second energy split: high energy",
+                value: decisionBinding(caseStudy.id, keyPath: \.energyHighThreshold),
+                range: 40...140,
+                valueText: caseStudy.rules.energyHighThreshold.formatted(.number.precision(.fractionLength(0)))
             )
 
-            if caseStudy.kind == .plant {
+            switch caseStudy.kind {
+            case .plant:
                 largeThresholdSlider(
-                    title: "Greenness threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.greenThreshold),
+                    title: "High-energy branch: greenness",
+                    value: decisionBinding(caseStudy.id, keyPath: \.plantGreenHighThreshold),
                     range: 0.05...1.0,
-                    valueText: caseStudy.rules.greenThreshold.formatted(.number.precision(.fractionLength(2)))
-                )
-            } else {
-                largeThresholdSlider(
-                    title: "Speed threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.speedThreshold),
-                    range: 0.05...1.0,
-                    valueText: caseStudy.rules.speedThreshold.formatted(.number.precision(.fractionLength(2)))
+                    valueText: caseStudy.rules.plantGreenHighThreshold.formatted(.number.precision(.fractionLength(2)))
                 )
 
                 largeThresholdSlider(
-                    title: "Vision threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.visionThreshold),
+                    title: "Green branch: size threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.plantSizeIfGreenThreshold),
                     range: 0.05...1.0,
-                    valueText: caseStudy.rules.visionThreshold.formatted(.number.precision(.fractionLength(2)))
+                    valueText: caseStudy.rules.plantSizeIfGreenThreshold.formatted(.number.precision(.fractionLength(2)))
                 )
-            }
 
-            if caseStudy.kind == .herbivore {
                 largeThresholdSlider(
-                    title: "Visibility threshold",
-                    value: decisionBinding(caseStudy.id, keyPath: \.visibilityThreshold),
+                    title: "Less-green / medium-energy branch: size threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.plantSizeIfNotGreenThreshold),
                     range: 0.05...1.0,
-                    valueText: caseStudy.rules.visibilityThreshold.formatted(.number.precision(.fractionLength(2)))
+                    valueText: caseStudy.rules.plantSizeIfNotGreenThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+            case .herbivore:
+                largeThresholdSlider(
+                    title: "High-energy branch: speed threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreSpeedHighEnergyThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.herbivoreSpeedHighEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                largeThresholdSlider(
+                    title: "Medium-energy branch: speed threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreSpeedMediumEnergyThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.herbivoreSpeedMediumEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                largeThresholdSlider(
+                    title: "Fast branch: vision threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreVisionFastThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.herbivoreVisionFastThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                largeThresholdSlider(
+                    title: "Medium-energy branch: visibility threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.herbivoreCamouflageSlowThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.herbivoreCamouflageSlowThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+            case .predator:
+                largeThresholdSlider(
+                    title: "High-energy branch: vision threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.predatorVisionHighEnergyThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.predatorVisionHighEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                largeThresholdSlider(
+                    title: "Medium-energy branch: vision threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.predatorVisionMediumEnergyThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.predatorVisionMediumEnergyThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                largeThresholdSlider(
+                    title: "Good-vision branch: speed threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.predatorSpeedGoodVisionThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.predatorSpeedGoodVisionThreshold.formatted(.number.precision(.fractionLength(2)))
+                )
+
+                largeThresholdSlider(
+                    title: "Medium-energy branch: size threshold",
+                    value: decisionBinding(caseStudy.id, keyPath: \.predatorSizePoorVisionThreshold),
+                    range: 0.05...1.0,
+                    valueText: caseStudy.rules.predatorSizePoorVisionThreshold.formatted(.number.precision(.fractionLength(2)))
                 )
             }
         }
     }
 
+    @ViewBuilder
     private func decisionTreeDiagram(_ caseStudy: DecisionTreeCase) -> some View {
-        VStack(spacing: 14) {
-            treeNode(
-                "ROOT: Enough energy?",
-                subtitle: "Energy ≥ \(caseStudy.rules.energyThreshold.formatted(.number.precision(.fractionLength(0))))"
-            )
+        switch caseStudy.kind {
+        case .plant:
+            plantDecisionTree(caseStudy)
+        case .herbivore:
+            herbivoreDecisionTree(caseStudy)
+        case .predator:
+            predatorDecisionTree(caseStudy)
+        }
+    }
 
-            treeSplit(
-                yes: "YES",
-                no: "NO",
-                yesDestination: secondTreeQuestion(for: caseStudy),
-                noDestination: "LEAF: Die"
-            )
+    private func plantDecisionTree(_ c: DecisionTreeCase) -> some View {
+        VStack(spacing: 16) {
+            treeNode("ROOT: Energy ≥ \(fmt(c.rules.energyLowThreshold))?", subtitle: "NO → Die | YES → next energy split")
+            treeConnector("YES")
+            treeNode("Energy ≥ \(fmt(c.rules.energyHighThreshold))?", subtitle: "YES and NO lead to different subtrees")
 
             HStack(alignment: .top, spacing: 18) {
                 VStack(spacing: 10) {
-                    treeNode(secondTreeQuestion(for: caseStudy), subtitle: secondTreeSubtitle(for: caseStudy))
-
-                    treeSplit(
-                        yes: "YES",
-                        no: "NO",
-                        yesDestination: thirdTreeQuestion(for: caseStudy),
-                        noDestination: alternateTreeQuestion(for: caseStudy)
-                    )
+                    treeBranchLabel("YES — high energy")
+                    treeNode("Green ≥ \(fmt(c.rules.plantGreenHighThreshold))?", subtitle: "Different size rule on each branch")
+                    HStack(spacing: 12) {
+                        VStack {
+                            treeBranchLabel("YES")
+                            treeNode("Size ≥ \(fmt(c.rules.plantSizeIfGreenThreshold))?", subtitle: "")
+                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                        }
+                        VStack {
+                            treeBranchLabel("NO")
+                            treeNode("Size ≥ \(fmt(c.rules.plantSizeIfNotGreenThreshold))?", subtitle: "")
+                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                        }
+                    }
                 }
 
-                treeLeaf("Die")
-            }
-
-            HStack(alignment: .top, spacing: 18) {
-                treeNode(thirdTreeQuestion(for: caseStudy), subtitle: thirdTreeSubtitle(for: caseStudy))
-                treeNode(alternateTreeQuestion(for: caseStudy), subtitle: alternateTreeSubtitle(for: caseStudy))
-            }
-
-            HStack(spacing: 24) {
-                treeLeaf("Survive")
-                treeLeaf("Die")
-                treeLeaf("Survive")
-                treeLeaf("Die")
+                VStack(spacing: 10) {
+                    treeBranchLabel("NO — medium energy")
+                    treeNode("Green ≥ \(fmt(c.rules.plantGreenHighThreshold))?", subtitle: "")
+                    HStack(spacing: 12) {
+                        VStack {
+                            treeBranchLabel("YES")
+                            treeNode("Size ≥ \(fmt(c.rules.plantSizeIfNotGreenThreshold))?", subtitle: "")
+                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                        }
+                        VStack {
+                            treeBranchLabel("NO")
+                            treeLeaf("Die")
+                        }
+                    }
+                }
             }
         }
-        .frame(maxWidth: .infinity)
+    }
+
+    private func herbivoreDecisionTree(_ c: DecisionTreeCase) -> some View {
+        VStack(spacing: 16) {
+            treeNode("ROOT: Energy ≥ \(fmt(c.rules.energyLowThreshold))?", subtitle: "NO → Die")
+            treeConnector("YES")
+            treeNode("Energy ≥ \(fmt(c.rules.energyHighThreshold))?", subtitle: "This split chooses which speed threshold applies")
+
+            HStack(alignment: .top, spacing: 18) {
+                VStack(spacing: 10) {
+                    treeBranchLabel("YES — high energy")
+                    treeNode("Speed ≥ \(fmt(c.rules.herbivoreSpeedHighEnergyThreshold))?", subtitle: "Stricter speed split")
+                    HStack(spacing: 12) {
+                        VStack {
+                            treeBranchLabel("YES")
+                            treeNode("Vision ≥ \(fmt(c.rules.herbivoreVisionFastThreshold))?", subtitle: "")
+                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                        }
+                        VStack {
+                            treeBranchLabel("NO")
+                            treeLeaf("Die")
+                        }
+                    }
+                }
+
+                VStack(spacing: 10) {
+                    treeBranchLabel("NO — medium energy")
+                    treeNode("Speed ≥ \(fmt(c.rules.herbivoreSpeedMediumEnergyThreshold))?", subtitle: "Different, lower speed split")
+                    HStack(spacing: 12) {
+                        VStack {
+                            treeBranchLabel("YES")
+                            treeNode("Visibility ≤ \(fmt(c.rules.herbivoreCamouflageSlowThreshold))?", subtitle: "")
+                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                        }
+                        VStack {
+                            treeBranchLabel("NO")
+                            treeLeaf("Die")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func predatorDecisionTree(_ c: DecisionTreeCase) -> some View {
+        VStack(spacing: 16) {
+            treeNode("ROOT: Energy ≥ \(fmt(c.rules.energyLowThreshold))?", subtitle: "NO → Die")
+            treeConnector("YES")
+            treeNode("Energy ≥ \(fmt(c.rules.energyHighThreshold))?", subtitle: "Different vision thresholds by energy branch")
+
+            HStack(alignment: .top, spacing: 18) {
+                VStack(spacing: 10) {
+                    treeBranchLabel("YES — high energy")
+                    treeNode("Vision ≥ \(fmt(c.rules.predatorVisionHighEnergyThreshold))?", subtitle: "")
+                    HStack(spacing: 12) {
+                        VStack {
+                            treeBranchLabel("YES")
+                            treeNode("Speed ≥ \(fmt(c.rules.predatorSpeedGoodVisionThreshold))?", subtitle: "")
+                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                        }
+                        VStack {
+                            treeBranchLabel("NO")
+                            treeLeaf("Die")
+                        }
+                    }
+                }
+
+                VStack(spacing: 10) {
+                    treeBranchLabel("NO — medium energy")
+                    treeNode("Vision ≥ \(fmt(c.rules.predatorVisionMediumEnergyThreshold))?", subtitle: "Lower vision threshold on this branch")
+                    HStack(spacing: 12) {
+                        VStack {
+                            treeBranchLabel("YES")
+                            treeNode("Size ≥ \(fmt(c.rules.predatorSizePoorVisionThreshold))?", subtitle: "")
+                            HStack { treeLeaf("Survive"); treeLeaf("Die") }
+                        }
+                        VStack {
+                            treeBranchLabel("NO")
+                            treeLeaf("Die")
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private func treeNode(_ title: String, subtitle: String) -> some View {
@@ -631,104 +783,48 @@ struct ContentView: View {
             Text(title)
                 .font(.title3.bold())
                 .multilineTextAlignment(.center)
-            Text(subtitle)
-                .font(.body.monospacedDigit())
-                .foregroundStyle(.secondary)
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .padding(14)
         .frame(maxWidth: .infinity)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.primary.opacity(0.25), lineWidth: 2)
+                .stroke(Color.primary.opacity(0.28), lineWidth: 2)
         )
     }
 
     private func treeLeaf(_ title: String) -> some View {
         Text("LEAF: \(title)")
             .font(.title3.bold())
-            .padding(.horizontal, 18)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
             .background(Color.secondary.opacity(0.12), in: Capsule())
     }
 
-    private func treeSplit(yes: String, no: String, yesDestination: String, noDestination: String) -> some View {
-        HStack {
-            VStack {
-                Text(yes).font(.title3.bold())
-                Image(systemName: "arrow.down")
-                Text(yesDestination)
-                    .font(.body.bold())
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-
-            VStack {
-                Text(no).font(.title3.bold())
-                Image(systemName: "arrow.down")
-                Text(noDestination)
-                    .font(.body.bold())
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
+    private func treeConnector(_ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(label).font(.title3.bold())
+            Image(systemName: "arrow.down")
+                .font(.title2)
         }
     }
 
-    private func secondTreeQuestion(for caseStudy: DecisionTreeCase) -> String {
-        switch caseStudy.kind {
-        case .plant: return "Green enough?"
-        case .herbivore: return "Fast enough?"
-        case .predator: return "Vision good enough?"
-        }
+    private func treeBranchLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.title3.bold())
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Color.secondary.opacity(0.10), in: Capsule())
     }
 
-    private func secondTreeSubtitle(for caseStudy: DecisionTreeCase) -> String {
-        switch caseStudy.kind {
-        case .plant:
-            return "Green ≥ \(caseStudy.rules.greenThreshold.formatted(.number.precision(.fractionLength(2))))"
-        case .herbivore:
-            return "Speed ≥ \(caseStudy.rules.speedThreshold.formatted(.number.precision(.fractionLength(2))))"
-        case .predator:
-            return "Vision ≥ \(caseStudy.rules.visionThreshold.formatted(.number.precision(.fractionLength(2))))"
-        }
-    }
-
-    private func thirdTreeQuestion(for caseStudy: DecisionTreeCase) -> String {
-        switch caseStudy.kind {
-        case .plant: return "Large enough?"
-        case .herbivore: return "Vision good enough?"
-        case .predator: return "Fast enough?"
-        }
-    }
-
-    private func thirdTreeSubtitle(for caseStudy: DecisionTreeCase) -> String {
-        switch caseStudy.kind {
-        case .plant:
-            return "Size ≥ \(caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2))))"
-        case .herbivore:
-            return "Vision ≥ \(caseStudy.rules.visionThreshold.formatted(.number.precision(.fractionLength(2))))"
-        case .predator:
-            return "Speed ≥ \(caseStudy.rules.speedThreshold.formatted(.number.precision(.fractionLength(2))))"
-        }
-    }
-
-    private func alternateTreeQuestion(for caseStudy: DecisionTreeCase) -> String {
-        switch caseStudy.kind {
-        case .plant: return "Can size compensate?"
-        case .herbivore: return "Hard to spot?"
-        case .predator: return "Large enough to compensate?"
-        }
-    }
-
-    private func alternateTreeSubtitle(for caseStudy: DecisionTreeCase) -> String {
-        switch caseStudy.kind {
-        case .plant:
-            return "Size ≥ \(caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2))))"
-        case .herbivore:
-            return "Visibility ≤ \(caseStudy.rules.visibilityThreshold.formatted(.number.precision(.fractionLength(2))))"
-        case .predator:
-            return "Size ≥ \(caseStudy.rules.sizeThreshold.formatted(.number.precision(.fractionLength(2))))"
-        }
+    private func fmt(_ value: Double) -> String {
+        value.formatted(.number.precision(.fractionLength(value > 2 ? 0 : 2)))
     }
 
     private var decisionTreeResults: some View {
