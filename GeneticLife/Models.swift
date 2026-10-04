@@ -167,9 +167,11 @@ struct MutationExample: Identifiable {
     let id = UUID()
     let before: Organism
     let after: Organism
-    let gene: String
-    let oldValue: Double
-    let newValue: Double
+    let gene: String?
+    let oldValue: Double?
+    let newValue: Double?
+
+    var didMutate: Bool { gene != nil }
 }
 
 struct GenerationStatistics {
