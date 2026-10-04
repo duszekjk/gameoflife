@@ -195,9 +195,19 @@ enum DecisionOutcome: String, CaseIterable, Identifiable {
 struct DecisionTreeRules {
     var energyThreshold: Double = 70
     var sizeThreshold: Double = 0.50
-    var traitThreshold: Double = 0.50
-    var requireGreen: Bool = true
-    var predictedOutcome: DecisionOutcome = .survive
+    var speedThreshold: Double = 0.50
+    var visionThreshold: Double = 0.50
+    var greenThreshold: Double = 0.55
+    var visibilityThreshold: Double = 0.55
+}
+
+struct DecisionTreeNodeResult: Identifiable {
+    let id = UUID()
+    let question: String
+    let value: Double
+    let threshold: Double
+    let passed: Bool
+    let branchLabel: String
 }
 
 struct DecisionTreeCase: Identifiable {
