@@ -297,7 +297,7 @@ struct ContentView: View {
     }
 
     private var selectionExplanation: some View {
-        let examples = Array(engine.selectedParents.prefix(4))
+        let examples = engine.selectionExamples
 
         return VStack(alignment: .leading, spacing: 14) {
             Text("Selection chooses parents probabilistically")
